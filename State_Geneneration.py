@@ -15,6 +15,29 @@ black = 0
 gray = 1
 palm = 2
 pine = 3
+P1_unit1 = int(4)
+P1_unit2 = int(5)
+P1_unit3 = int(6)
+P1_unit4 = int(7)
+P2_unit1 = int(15)
+P2_unit2 = int(16)
+P2_unit3 = int(17)
+P2_unit4 = int(18)
+P1_income = 13
+P1_money = 14
+P2_income = 24
+P2_money = 25
+
+
+player1_provinces = {}
+player2_provinces = {}
+
+
+
+player1_province_ambar_cost = {}
+player2_provinces_ambar_cost = {}
+
+
 activeHexes = []
 
 
@@ -110,10 +133,11 @@ def uniteIslandsWithRoads(centers):
         currentX = startPoint[0] + delta * i * np.cos(angle)
         currentY = startPoint[1] + delta * i * np.sin(angle)
         hex = getHexByPos(currentX, currentY)
-        #spawnIsland(hex, 2)
+        # spawnIsland(hex, 2)
         if hex != prev:
             spawnIsland(hex, 2)
             prev = hex
+
 
 def getRandomHexInsideBounds():
     return np.random.randint(height), np.random.randint(width)
@@ -178,6 +202,15 @@ def findGoodPlaceForNewProvince(fraction):
 def spawnProvince(spawHex, startingPotential):
     global activeHexes
     global state
+    global player1_provinces
+    global player2_provinces
+    isPlayer1 = state[spawHex][player1] == 1
+    if isPlayer1:
+        player1_provinces[1] = []
+        player1_province_ambar_cost[1] = 12
+    else:
+        player2_provinces[1] = []
+        player2_provinces_ambar_cost[1] = 12
     genPotential = np.zeros((height, width), "uint8")
     propagationList = []
     propagationList.append(spawHex)
@@ -185,16 +218,36 @@ def spawnProvince(spawHex, startingPotential):
     while len(propagationList) > 0:
         hex = propagationList.pop()
         if np.random.randint(startingPotential) > genPotential[hex]: continue
-        state[hex][player1 if state[spawHex][player1] == 1 else player2] = 1
+        state[hex][player1 if isPlayer1 else player2] = 1
+        if isPlayer1:
+            player1_provinces[1].append(hex)
+        else:
+            player2_provinces[1].append(hex)
         state[hex][gray] = 0
         if genPotential[hex] == 0: continue
         for i in range(6):
-            adjHex = getAdjecentHex(hex,i)
+            adjHex = getAdjecentHex(hex, i)
             if not adjHex is None and propagationList.count(adjHex) == 0 \
                     and state[adjHex][black] == 0 and state[adjHex][gray] == 1:
                 genPotential[adjHex] = genPotential[hex] - 1
                 propagationList.append(adjHex)
-
+    #теперь дадим провинции деньги и доход записав эти значения в состояние, учитывая деревья
+    if isPlayer1:
+        number_of_trees = 0
+        for hex in player1_provinces[1]:
+            if state[hex][palm]==1 or state[hex][pine] == 1: number_of_trees+=1
+        income = len(player1_provinces[1])-number_of_trees
+        for hex in player1_provinces[1]:
+            state[hex][P1_income] = income
+            state[hex][P1_money] = 10#Количество денег по умолчанию в начале игры
+    else:
+        number_of_trees = 0
+        for hex in player2_provinces[1]:
+            if state[hex][palm] == 1 or state[hex][pine] == 1: number_of_trees += 1
+        income = len(player2_provinces[1]) - number_of_trees
+        for hex in player2_provinces[1]:
+            state[hex][P2_income] = income
+            state[hex][P2_money] = 10
 
 def spawnProvinces():
     global activeHexes
@@ -205,10 +258,7 @@ def spawnProvinces():
             hex = findGoodPlaceForNewProvince(fraction)
             state[hex][player1 if fraction == 0 else player2] = 1
             state[hex][gray] = 0  # теперь гексагон не серый
-            spawnProvince(hex, fraction+1)#игрок 2 имеет приемущество это нужно для баланса
-
-
-
+            spawnProvince(hex, fraction + 1)  # игрок 2 имеет приемущество это нужно для баланса
 
 
 def generate_random_game():
@@ -243,8 +293,8 @@ def drawGame():
     BLACK = (0, 0, 0)
     BLUE = (0, 0, 0.5)  # игрок 1
     RED = (0.5, 0, 0)  # игрок 2
-    PINETREE = (0,0.3,0)
-    PALMTREE = (0,0.7,0)
+    PINETREE = (0, 0.3, 0)
+    PALMTREE = (0, 0.7, 0)
     for hex in xy:
         hex = int(hex[0]), int(hex[1])
         if state[hex][black] == 1:
