@@ -53,8 +53,6 @@ def compute_hex_by_layer(i, hex):
     if i < 61:
         return base_hexes[8][odd][0] + hex[0] + i - 56, hex[1] + base_hexes[8][odd][1]
 
-def isPlayerNearBy(hex,player):
-
 
 def normalise_spend_order(order):#зануляем только черные так как другие
                                         #возможности зависят от порядка постороек:например можно
@@ -67,6 +65,8 @@ def normalise_spend_order(order):#зануляем только черные т�
             order[i] = 0
             continue
         not_black.append((hex,order[i]))
+    not_black = np.asarray(not_black)#нормализация
+    not_black[:][1] = not_black[:][1]/not_black[:][1].sum()
     return not_black
 
 
@@ -117,13 +117,13 @@ def get_action_distribution(player):
     return activity_order, unit_movement_order, actions, hexes_with_units, spend_money_matrix, not_black_spend_hexes, hex_spend_order
 
 
-def fill_the_probabilities_of_actions(move, hex):  # принимает на вход массив из 61 одного
+def normalise_the_probabilities_of_actions(move, hex):  # принимает на вход массив из 61 одного
     # возможного хода и возвращает нормализованный
 
     return
 
 
-def perform_one_unit_move(hex, player, unit):
+def perform_one_unit_move(destination_hex, player, unit):
 
 
 def move_all_units(player, actions, hexes_with_units):
@@ -144,7 +144,7 @@ def move_all_units(player, actions, hexes_with_units):
     # на каждой итерации делается ход с учетом предыдущих итераций
     units = compute_units(player)
     for hex in order:
-        actions[hex[0]], active_moves = fill_the_probabilities_of_actions(actions[hex[0]], hex[0])
+        actions[hex[0]], active_moves = normalise_the_probabilities_of_actions(actions[hex[0]], hex[0])
         r = np.random.random()
         s = 0
         move = None
@@ -165,7 +165,35 @@ def move_all_units(player, actions, hexes_with_units):
             perform_one_unit_move(move_to_hex, player, units[3])
 
 
-def spend_all_money(player, spend_money_matrix, active_spend_hexes):
+def normalise_the_probabilities_of_spending(actions, hex):
+
+def spend_money_on_hex(hex, action):
+
+
+def spend_all_money(player, spend_money_matrix, not_black_spend_hexes):
+    order = []
+    for i in range(len(not_black_spend_hexes)):
+        r = np.random.random()
+        s = 0
+        for hex in not_black_spend_hexes:
+            s += hex[1]
+            if r < s:
+                order.append(hex)
+                np.delete(not_black_spend_hexes, hex)
+                not_black_spend_hexes[:][1] = not_black_spend_hexes[:][1] / not_black_spend_hexes[:][1].sum()
+                break
+    #order : каждый элемент это гексагон+его вероятность
+    for hex in order:
+        spend_money_matrix[hex[0]], active_actions = normalise_the_probabilities_of_spending(spend_money_matrix[hex[0]], hex[0])
+        r = np.random.random()
+        s = 0
+        action = None
+        # семплирование возможного хода
+        for i in range(len(active_actions)):
+            s += spend_money_matrix[hex[0], active_actions[i]]
+            if r < s:
+                action = active_actions[i]
+        spend_money_on_hex(hex[0],action)
 
 
 def make_move(player):
@@ -178,6 +206,6 @@ def make_move(player):
     else:
         spend_all_money(player, spend_money_matrix, not_black_spend_hexes)
         move_all_units(player, actions, hexes_with_units)
-    if len(SG.player1_hexes) == 1 or len(SG.player2_hexes) == 1:
+    if len(SG.player1_provinces) == 1 or len(SG.player2_provinces) == 1:
         return 1
     return 0
