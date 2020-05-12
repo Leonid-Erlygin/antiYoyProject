@@ -27,8 +27,9 @@ P1_income = 13
 P1_money = 14
 P2_income = 24
 P2_money = 25
-
-
+P1_dict = {"unit1":4, "unit2":5,"unit3":6,"unit4":7, "player_hexes":8,"tower1":9,"tower2":10,"ambar":11,"town":12,"income":13,"money":14}
+general_dict = {"black":0,"gray":1, "palm":2,"pine":3}
+P2_dict = {"unit1":15, "unit2":16,"unit3":17,"unit4":18, "player_hexes":19,"tower1":20,"tower2":21,"ambar":22,"town":23,"income":24,"money":25}
 player1_provinces = {}
 player2_provinces = {}
 
