@@ -36,7 +36,7 @@ player2_provinces = {}
 
 
 player1_province_ambar_cost = {}
-player2_provinces_ambar_cost = {}
+player2_province_ambar_cost = {}
 
 
 activeHexes = []

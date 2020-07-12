@@ -57,23 +57,26 @@ def compute_hex_by_layer(i, hex):
         return base_hexes[8][odd][0] + hex[0] + i - 56, hex[1] + base_hexes[8][odd][1]
 
 
-def normalise_spend_order(order):#зануляем только черные так как другие
-                                        #возможности зависят от порядка постороек:например можно
-                                        #соединить провинции и тогда недоступные клетки станут доступны
-
-    not_black=[]
-    for i in range(len(order)):
-        hex = i // SG.width, i % SG.width
-        if SG.state[hex][SG.black] == 1:
-            order[i] = 0
-            continue
-        not_black.append((hex,order[i]))
-    not_black = np.asarray(not_black)#нормализация
-    not_black[:][1] = not_black[:][1]/not_black[:][1].sum()
-    return not_black
 
 
 def get_action_distribution(player):
+    """
+    Возвращает полное распределение вероятностей для хода из данного состояния. Данные здесь не
+    нормализуются. Выдаются вероятности с каким-то распределением. Лишь во время семплирования действий
+    возможна нормальизация.
+    :param player:
+    :return:
+    activity_order - порядок в котором выполняются группа действий: сначала ход всеми юнитами или
+    сначала потратить все деньги
+    unit_movement_order - порядок в котором будут обходиться клетки, из которых сделает ход юнит.
+    actions - из данной клетки юнит может перейти в 61 другую(включая эту же). Для задания вероятностей
+    переходов используется массив (board_width, board_height, 61)
+    hexes_with_units - массив указывающий в каких гексагонах были юниты в начале хода(может изменяться
+    по мере семплирования)
+    spend_money_matrix - деньги в каждом гексагоне можно потратить 7-ю способами. Эта матрица задаёт
+    вероятности соответсвующих трат
+    hex_spend_order - порядок в котором будут обходиться клетки, в которых будут потрачены деньги.
+    """
     # сейчас сгенерирую случайно(равномерно для доступных действий)
     activity_order = [0.5, 0.5]  # 0 - движение юнитов/1-трата денег
     field_size = SG.height * SG.width
@@ -115,9 +118,9 @@ def get_action_distribution(player):
     spend_money_matrix = np.zeros((SG.height, SG.width, 7))
     spend_money_matrix[:, :] = mean1
 
-    not_black_spend_hexes = normalise_spend_order(hex_spend_order)  # черные гексагоны отбрасываются
 
-    return activity_order, unit_movement_order, actions, hexes_with_units, spend_money_matrix, not_black_spend_hexes, hex_spend_order
+
+    return activity_order, unit_movement_order, actions, hexes_with_units, spend_money_matrix, hex_spend_order
 
 
 def normalise_the_probabilities_of_actions(move, hex):  # принимает на вход массив из 61 одного
@@ -376,7 +379,7 @@ def normalise_the_probabilities_of_spending(actions, hex):
 def spend_money_on_hex(hex, action):
 
 
-def spend_all_money(player, spend_money_matrix, not_black_spend_hexes):
+def spend_all_money(player, spend_money_matrix):
     order = []
     for i in range(len(not_black_spend_hexes)):
         r = np.random.random()
@@ -403,6 +406,11 @@ def spend_all_money(player, spend_money_matrix, not_black_spend_hexes):
 
 
 def make_move(player):
+    """
+    Совершает ход игроком
+    :param player: 0 если первый игрок, 1 если второй
+    :return: возвращает 1, если у одного из игроков закончились провинции. Иначе 0
+    """
     global player_dict,adversary_dict,player_provinces,player_ambar_cost
     if player == 0:
         player_dict = SG.P1_dict
@@ -416,13 +424,13 @@ def make_move(player):
         player_ambar_cost = SG.player2_province_ambar_cost
 
     activity_order, unit_movement_order, actions, hexes_with_units, \
-    spend_money_matrix, not_black_spend_hexes, hex_spend_order = get_action_distribution(player)
+    spend_money_matrix, hex_spend_order = get_action_distribution(player)
     activity = np.random.random() > activity_order[0]  # семплирование действия
     if activity == 0:
         move_all_units(player, actions, hexes_with_units)
-        spend_all_money(player, spend_money_matrix, not_black_spend_hexes)
+        spend_all_money(player, spend_money_matrix)
     else:
-        spend_all_money(player, spend_money_matrix, not_black_spend_hexes)
+        spend_all_money(player, spend_money_matrix)
         move_all_units(player, actions, hexes_with_units)
     if len(SG.player1_provinces) == 0 or len(SG.player2_provinces) == 0:
         return 1
