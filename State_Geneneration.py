@@ -1,48 +1,33 @@
 import numpy as np
 
 import matplotlib.pyplot as plt
-from matplotlib import collections, colors, transforms
+from matplotlib import collections, transforms
 
-width = 14
-height = 22
-S = 200  # площадь описываещего круга
+S = 200  # площадь описывающего круга(необходимо для координатной системы)
 r = (S / np.pi) ** 0.5
-state = np.zeros((height, width, 26), "uint8")
-state[:, :, 0] = 1
-player1 = 8
-player2 = 19
-black = 0
-gray = 1
-palm = 2
-pine = 3
-P1_unit1 = int(4)
-P1_unit2 = int(5)
-P1_unit3 = int(6)
-P1_unit4 = int(7)
-P2_unit1 = int(15)
-P2_unit2 = int(16)
-P2_unit3 = int(17)
-P2_unit4 = int(18)
-P1_income = 13
-P1_money = 14
-P2_income = 24
-P2_money = 25
-P1_dict = {"unit1":4, "unit2":5,"unit3":6,"unit4":7, "player_hexes":8,"tower1":9,"tower2":10,"ambar":11,"town":12,"income":13,"money":14}
-general_dict = {"black":0,"gray":1, "palm":2,"pine":3}
-P2_dict = {"unit1":15, "unit2":16,"unit3":17,"unit4":18, "player_hexes":19,"tower1":20,"tower2":21,"ambar":22,"town":23,"income":24,"money":25}
+width = 14  # параметры поля, измеряемые в гексагонах
+height = 22
+
+state = np.zeros((height, width, 29), "uint8")
+unit_type = np.zeros((height,width),"uint8") # вспомогательный массив, указывающий тип юнита находящегося в данной клетке
+                                             # юнит либо у игрока 1, либо у игрока 2
+P1_dict = {"unit1": 4, "unit2": 5, "unit3": 6, "unit4": 7, "player_hexes": 8, "tower1": 9, "tower2": 10, "ambar": 11,
+           "town": 12, "income": 13, "money": 14, "province_index": 15}
+general_dict = {"black": 0, "gray": 1, "palm": 2, "pine": 3,"graves": 28}
+P2_dict = {"unit1": 16, "unit2": 17, "unit3": 18, "unit4": 19, "player_hexes": 20, "tower1": 21, "tower2": 22,
+           "ambar": 23, "town": 24, "income": 25, "money": 26,"province_index": 27}
 player1_provinces = {}
 player2_provinces = {}
 
-
+state[:, :, general_dict["black"]] = 1
 
 player1_province_ambar_cost = {}
 player2_province_ambar_cost = {}
 
-
 activeHexes = []
 
 
-def getAdjecentHex(hex, direction):
+def getAdjacentHex(hex, direction):
     if direction == 0:
         if hex[1] == 0: return None
 
@@ -78,7 +63,32 @@ def getAdjecentHex(hex, direction):
         if hex[1] % 2 == 1:
             return hex[0] + 1, hex[1] - 1
 
-
+def get_adjacent_hexes(hex):
+    """
+    Возвращает список прилегающих гексагонов
+    :param hex: Гексагон, для которого ищем соседей
+    :return:
+    """
+    adjacent = []
+    for i in range(6):
+        adj = getAdjacentHex(hex,i)
+        if adj is not None:
+            adjacent.append(adj)
+    return adjacent
+def get_adjacent_friendly_hexes(hex,player):
+    """
+    Возвращает список дружественных прилегающих гексагонов
+    :param hex: Гексагон, для которого ищем соседей
+    :param player: Игрок
+    :return:
+    """
+    adjacent = []
+    layer = P1_dict["player_hexes"] if player == 1 else P2_dict["player_hexes"]
+    for i in range(6):
+        adj = getAdjacentHex(hex, i)
+        if adj is not None and state[adj][layer] == 1:
+            adjacent.append(adj)
+    return adjacent
 def spawnIsland(startHex, size):
     global activeHexes
     global state
@@ -93,15 +103,15 @@ def spawnIsland(startHex, size):
         gen[startHex] = 1
 
         if np.random.randint(low=0, high=size) > genPotential[hex]: continue
-        x = state[hex][gray] != 1
+        x = state[hex][general_dict["gray"]] != 1
         if x: activeHexes.append(hex)
-        state[hex][gray] = 1  # клетка из чёрной становится серой
-        state[hex][black] = 0  # эта клетка больше не чёрная
+        state[hex][general_dict["gray"]] = 1  # клетка из чёрной становится серой
+        state[hex][general_dict["black"]] = 0  # эта клетка больше не чёрная
 
         if genPotential[hex] == 0 or not x: continue
 
         for i in range(6):
-            adjHex = getAdjecentHex(hex, i)
+            adjHex = getAdjacentHex(hex, i)
             if (not adjHex is None and not gen[adjHex] and propagationList.count(adjHex) == 0):
                 genPotential[adjHex] = genPotential[hex] - 1
                 propagationList.append(adjHex)
@@ -146,10 +156,10 @@ def getRandomHexInsideBounds():
 
 def isNearWater(hex):
     for i in range(6):
-        adj = getAdjecentHex(hex, i)
+        adj = getAdjacentHex(hex, i)
         if adj is None:
             continue
-        if state[adj][black] == 1:
+        if state[adj][general_dict["black"]] == 1:
             return True
     return False
 
@@ -158,9 +168,9 @@ def spawnTree(hex):
     global activeHexes
     global state
     if isNearWater(hex):
-        state[hex][palm] = 1  # Добавил пальму
+        state[hex][general_dict["palm"]] = 1  # Добавил пальму
     else:
-        state[hex][pine] = 1  # Добавил ёлку
+        state[hex][general_dict["pine"]] = 1  # Добавил ёлку
 
 
 def addTrees():
@@ -175,22 +185,27 @@ def findGoodPlaceForNewProvince(fraction):
 
         return activeHexes[np.random.randint(len(activeHexes))]
     else:
-        moveZoneNumber = (state[:, :, gray] == 1) * (-1)  # определён только на серых
+        moveZoneNumber = (state[:, :, general_dict["gray"]] == 1) * (-1)  # определён только на серых
         expanded = False
         step = 0
         while True:
             expanded = False
             for hex in activeHexes:
-                if moveZoneNumber[hex] != step: continue
+                if moveZoneNumber[hex] != step:
+                    continue
                 for dir in range(6):
-                    adj = getAdjecentHex(hex, dir)
-                    if adj is None: continue
-                    if state[adj][black] == 1: continue
-                    if moveZoneNumber[adj] != -1: continue
+                    adj = getAdjacentHex(hex, dir)
+                    if adj is None:
+                        continue
+                    if state[adj][general_dict["black"]] == 1:
+                        continue
+                    if moveZoneNumber[adj] != -1:
+                        continue
 
                     moveZoneNumber[adj] = step + 1
                     expanded = True
-            if not expanded: break
+            if not expanded:
+                break
             step += 1
 
         result = None
@@ -200,55 +215,60 @@ def findGoodPlaceForNewProvince(fraction):
         return result
 
 
-def spawnProvince(spawHex, startingPotential):
+def spawnProvince(spawnHex, startingPotential):
     global activeHexes
     global state
     global player1_provinces
     global player2_provinces
-    isPlayer1 = state[spawHex][player1] == 1
+    isPlayer1 = state[spawnHex][P1_dict["player_hexes"]] == 1
     if isPlayer1:
         player1_provinces[1] = []
         player1_province_ambar_cost[1] = 12
     else:
         player2_provinces[1] = []
-        player2_provinces_ambar_cost[1] = 12
+        player2_province_ambar_cost[1] = 12
     genPotential = np.zeros((height, width), "uint8")
     propagationList = []
-    propagationList.append(spawHex)
-    genPotential[spawHex] = startingPotential
+    propagationList.append(spawnHex)
+    genPotential[spawnHex] = startingPotential
     while len(propagationList) > 0:
         hex = propagationList.pop()
         if np.random.randint(startingPotential) > genPotential[hex]: continue
-        state[hex][player1 if isPlayer1 else player2] = 1
+        state[hex][P1_dict["player_hexes"] if isPlayer1 else P2_dict["player_hexes"]] = 1
         if isPlayer1:
             player1_provinces[1].append(hex)
+            state[hex][P1_dict["province_index"]] = 1  # теперь гексагон в первой провинции
         else:
             player2_provinces[1].append(hex)
-        state[hex][gray] = 0
+            state[hex][P2_dict["province_index"]] = 1
+        state[hex][general_dict["gray"]] = 0
         if genPotential[hex] == 0: continue
         for i in range(6):
-            adjHex = getAdjecentHex(hex, i)
+            adjHex = getAdjacentHex(hex, i)
             if not adjHex is None and propagationList.count(adjHex) == 0 \
-                    and state[adjHex][black] == 0 and state[adjHex][gray] == 1:
+                    and state[adjHex][general_dict["black"]] == 0 and state[adjHex][general_dict["gray"]] == 1:
                 genPotential[adjHex] = genPotential[hex] - 1
                 propagationList.append(adjHex)
-    #теперь дадим провинции деньги и доход записав эти значения в состояние, учитывая деревья
+    # теперь дадим провинции деньги и доход записав эти значения в состояние, учитывая деревья
     if isPlayer1:
         number_of_trees = 0
         for hex in player1_provinces[1]:
-            if state[hex][palm]==1 or state[hex][pine] == 1: number_of_trees+=1
-        income = len(player1_provinces[1])-number_of_trees
+            if state[hex][general_dict["palm"]] == 1 or state[hex][general_dict["pine"]] == 1:
+                number_of_trees += 1
+        income = len(player1_provinces[1]) - number_of_trees
         for hex in player1_provinces[1]:
-            state[hex][P1_income] = income
-            state[hex][P1_money] = 10#Количество денег по умолчанию в начале игры
+            state[hex][P1_dict["income"]] = income
+            state[hex][P1_dict["money"]] = 10  # Количество денег по умолчанию в начале игры
     else:
         number_of_trees = 0
         for hex in player2_provinces[1]:
-            if state[hex][palm] == 1 or state[hex][pine] == 1: number_of_trees += 1
+            if state[hex][general_dict["palm"]] == 1 or state[hex][general_dict["pine"]] == 1:
+                number_of_trees += 1
         income = len(player2_provinces[1]) - number_of_trees
         for hex in player2_provinces[1]:
-            state[hex][P2_income] = income
-            state[hex][P2_money] = 10
+            state[hex][P2_dict["income"]] = income
+            state[hex][P2_dict["money"]] = 10
+
 
 def spawnProvinces():
     global activeHexes
@@ -257,8 +277,8 @@ def spawnProvinces():
     for i in range(quantity):
         for fraction in range(2):
             hex = findGoodPlaceForNewProvince(fraction)
-            state[hex][player1 if fraction == 0 else player2] = 1
-            state[hex][gray] = 0  # теперь гексагон не серый
+            state[hex][P1_dict["player_hexes"] if fraction == 0 else P2_dict["player_hexes"]] = 1
+            state[hex][general_dict["gray"]] = 0  # теперь гексагон не серый
             spawnProvince(hex, fraction + 1)  # игрок 2 имеет приемущество это нужно для баланса
 
 
@@ -290,6 +310,7 @@ def drawGame():
     y = np.arange(width)
     xy = np.transpose([np.tile(x, len(y)), np.repeat(y, len(x))])
     color = []
+
     GRAY = (0.5, 0.5, 0.5)
     BLACK = (0, 0, 0)
     BLUE = (0, 0, 0.5)  # игрок 1
@@ -298,22 +319,22 @@ def drawGame():
     PALMTREE = (0, 0.7, 0)
     for hex in xy:
         hex = int(hex[0]), int(hex[1])
-        if state[hex][black] == 1:
+        if state[hex][general_dict["black"]] == 1:
             color.append(BLACK)
             continue
-        if state[hex][player1] == 1:
+        if state[hex][P1_dict["player_hexes"]] == 1:
             color.append(BLUE)
             continue
-        if state[hex][player2] == 1:
+        if state[hex][P2_dict["player_hexes"]] == 1:
             color.append(RED)
             continue
-        if state[hex][pine] == 1:
+        if state[hex][general_dict["pine"]] == 1:
             color.append(PINETREE)
             continue
-        if state[hex][palm] == 1:
+        if state[hex][general_dict["palm"]] == 1:
             color.append(PALMTREE)
             continue
-        if state[hex][gray] == 1:
+        if state[hex][general_dict["gray"]] == 1:
             color.append(GRAY)
             continue
 
