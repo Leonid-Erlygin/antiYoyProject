@@ -453,6 +453,31 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
 
     # 1,4,5):
     else:
+        # необходимо произвести слияние наших клеток если это необходимо:
+        destination_hex_province = state[destination_hex][adversary_dict["province_index"]]
+        adjacent_hexes = sg.get_adjacent_hexes(destination_hex)
+        adjacent_provinces = []
+        for hex in adjacent_hexes:
+            province = state[hex][player_dict["province_index"]]
+            if province != 0 and province not in adjacent_provinces:
+                adjacent_provinces.append(province)
+        if len(adjacent_provinces) == 1:
+            state[destination_hex][player_dict["player_hexes"]] = 1
+            state[destination_hex][player_dict["money"]] = state[departure_hex][player_dict["money"]]
+
+            player_provinces[adjacent_provinces[0]] += [destination_hex]
+
+            change_income_in_province(adjacent_provinces[0], state[departure_hex][player_dict["income"]] + 1, pl=player)
+
+            state[destination_hex][player_dict["province_index"]] = state[departure_hex][
+                player_dict["province_index"]]
+
+        elif len(adjacent_provinces) > 1:
+            merge_provinces(adjacent_provinces, destination_hex)  # слияние разных соседних провинций
+        else:
+            sys.exit("in perform_one_unit_move function: no adjacent provinces detected")
+        state[destination_hex][player_dict[unit]] = 1
+        sg.unit_type[destination_hex] = unit_type
         # если переходим в серую клетку, то можно не проверять разбились ли провинции врага
         if state[destination_hex][sg.general_dict["gray"]] == 1:
             # уничтожаем пальму или ёлку
@@ -460,27 +485,6 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
             state[destination_hex][sg.general_dict["palm"]] = 0
             state[destination_hex][sg.general_dict["gray"]] = 0
 
-            adjacent_hexes = sg.get_adjacent_hexes(destination_hex)
-            adjacent_provinces = []
-            for hex in adjacent_hexes:
-                province = state[hex][player_dict["province_index"]]
-                if province != 0 and province not in adjacent_provinces:
-                    adjacent_provinces.append(province)
-            if len(adjacent_provinces) == 1:
-                state[destination_hex][player_dict["player_hexes"]] = 1
-                state[destination_hex][player_dict["money"]] = state[departure_hex][player_dict["money"]]
-                state[destination_hex][player_dict["income"]] = state[departure_hex][player_dict["income"]]
-                player_provinces[adjacent_provinces[0]] += [destination_hex]
-                state[destination_hex][player_dict["province_index"]] = state[departure_hex][
-                    player_dict["province_index"]]
-
-            elif len(adjacent_provinces) > 1:
-                merge_provinces(adjacent_provinces, destination_hex)  # слияние разных соседних провинций
-            else:
-                sys.exit("in perform_one_unit_move function: no adjacent provinces detected")
-
-            state[destination_hex][player_dict[unit]] = 1
-            sg.unit_type[destination_hex] = unit_type
         else:
             # переходим во вражескую клетку. Нужно учесть возможный разрыв провинций.
             # также необходимо полностью уничтожить содержимое клетки
@@ -502,14 +506,9 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
             # уничтожаем всё что есть в клетке и ставим туда нашего юнита
             state[destination_hex][adversary_dict["player_hexes"]] = 0
 
-            state[destination_hex][player_dict["player_hexes"]] = 1
-            state[destination_hex][player_dict[unit]] = 1
-
             state[destination_hex][adversary_dict["income"]] = 0
-            state[destination_hex][player_dict["money"]] = state[departure_hex][player_dict["money"]]
-            state[destination_hex][player_dict["income"]] = state[departure_hex][player_dict["income"]]
 
-            province = state[destination_hex][adversary_dict["province_index"]]
+            province = destination_hex_province
 
             state[destination_hex][adversary_dict["province_index"]] = 0
             state[destination_hex][player_dict["province_index"]] = state[departure_hex][player_dict["province_index"]]
