@@ -29,9 +29,11 @@ activeHexes = []
 
 def getAdjacentHex(hex, direction):
     if direction == 0:
-        if hex[1] == 0: return None
+        if hex[1] == 0:
+            return None
 
-        if hex[0] == 0 and hex[1] % 2 == 0: return None
+        if hex[0] == 0 and hex[1] % 2 == 0:
+            return None
 
         if hex[1] % 2 == 1:
             return hex[0], hex[1] - 1
@@ -39,27 +41,34 @@ def getAdjacentHex(hex, direction):
             return hex[0] - 1, hex[1] - 1
 
     if direction == 1:
-        if hex[0] == 0: return None
+        if hex[0] == 0:
+            return None
         return hex[0] - 1, hex[1]
     if direction == 2:
-        if hex[1] == width - 1: return None
-        if hex[0] == 0 and hex[1] % 2 == 0: return None
+        if hex[1] == width - 1:
+            return None
+        if hex[0] == 0 and hex[1] % 2 == 0:
+            return None
         if hex[1] % 2 == 1:
             return hex[0], hex[1] + 1
         else:
             return hex[0] - 1, hex[1] + 1
     if direction == 3:
-        if hex[1] == width - 1: return None
-        if hex[0] == height - 1 and hex[1] % 2 == 1: return None
+        if hex[1] == width - 1:
+            return None
+        if hex[0] == height - 1 and hex[1] % 2 == 1:
+            return None
         if hex[1] % 2 == 0:
             return hex[0], hex[1] + 1
         else:
             return hex[0] + 1, hex[1] + 1
     if direction == 4:
-        if hex[0] == height - 1: return None
+        if hex[0] == height - 1:
+            return None
         return hex[0] + 1, hex[1]
     if direction == 5:
-        if hex[1] == 0 or (hex[0] == height - 1 and hex[1] % 2 == 1): return None
+        if hex[1] == 0 or (hex[0] == height - 1 and hex[1] % 2 == 1):
+            return None
         if hex[1] % 2 == 1:
             return hex[0] + 1, hex[1] - 1
 

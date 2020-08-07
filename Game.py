@@ -1,13 +1,12 @@
 import numpy as np
 import State_Geneneration as SG
 
+# Замечания:
+# - Нужно штрафовать нейронку, если она выбирает невозможные, по правилам игры, варианты
 
 
 #SG.generate_random_game()
 #SG.drawGame()
-a = [(1,1),(2,3),(4,5)]
-b = a
-a.remove((1,1))
-print(b)
+print(np.array([1, 2, 3]) + 1 <= 4)
 # GP.make_move(0)
 # SG.drawGame()
