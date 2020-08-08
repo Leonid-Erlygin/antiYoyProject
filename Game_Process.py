@@ -5,15 +5,15 @@ import sys
 
 # определяет относительный сдвиг для индексации гексагона по номеру слоя
 base_hexes = [
-    ((-2, -4), (-2, -4))  # i<5, even layer/odd layer
-    , ((-3, -3), (-2, -3))  # i<11
-    , ((-3, -2), (-3, -2))  # i<18
-    , ((-4, -1), (-3, -1))  # i<26
-    , ((-4, 0), (-4, 0))  # i<35
-    , ((-4, 1), (-3, 1))  # i<43
-    , ((-3, 2), (-3, 2))  # i<50
-    , ((-3, 3), (-2, 3))  # i<56
-    , (-2, 4), (-2, 4)  # i<61
+    ((-2, -4), (-2, -4)),  # i<5, even layer/odd layer
+    ((-3, -3), (-2, -3)),  # i<11
+    ((-3, -2), (-3, -2)),  # i<18
+    ((-4, -1), (-3, -1)),  # i<26
+    ((-4, 0), (-4, 0)),  # i<35
+    ((-4, 1), (-3, 1)),  # i<43
+    ((-3, 2), (-3, 2)),  # i<50
+    ((-3, 3), (-2, 3)),  # i<56
+    (-2, 4), (-2, 4)  # i<61
 ]
 player = 0
 adversary = 0
@@ -23,34 +23,36 @@ player_ambar_cost = {}
 player_dict = {}
 adversary_dict = {}
 unit_food_map = {1: -2, 2: -6, 3: -18, 4: -36}
+unit_cost_map = {1: 10, 2: 20, 3: 30, 4: 40}
+action_unit_map = {0: 1, 1: 2, 2: 3, 5: 4}
 
 
-def compute_hex_by_layer(i, hex):
+def compute_hex_by_layer(i, hexagon):
     """
 
     :param i: номер возможного гексагона, в который можно перейти из данного
-    :param hex: гексагон, в котором находится юнит
+    :param hexagon: гексагон, в котором находится юнит
     :return: гексагон, соответсвующий номеру
     """
-    odd = hex[1] % 2 != 0
+    odd = hexagon[1] % 2 != 0
     if i < 5:
-        return base_hexes[0][odd][0] + hex[0] + i - 0, hex[1] + base_hexes[0][odd][1]
+        return base_hexes[0][odd][0] + hexagon[0] + i - 0, hexagon[1] + base_hexes[0][odd][1]
     if i < 11:
-        return base_hexes[1][odd][0] + hex[0] + i - 5, hex[1] + base_hexes[1][odd][1]
+        return base_hexes[1][odd][0] + hexagon[0] + i - 5, hexagon[1] + base_hexes[1][odd][1]
     if i < 18:
-        return base_hexes[2][odd][0] + hex[0] + i - 11, hex[1] + base_hexes[2][odd][1]
+        return base_hexes[2][odd][0] + hexagon[0] + i - 11, hexagon[1] + base_hexes[2][odd][1]
     if i < 26:
-        return base_hexes[3][odd][0] + hex[0] + i - 18, hex[1] + base_hexes[3][odd][1]
+        return base_hexes[3][odd][0] + hexagon[0] + i - 18, hexagon[1] + base_hexes[3][odd][1]
     if i < 35:
-        return base_hexes[4][odd][0] + hex[0] + i - 26, hex[1] + base_hexes[4][odd][1]
+        return base_hexes[4][odd][0] + hexagon[0] + i - 26, hexagon[1] + base_hexes[4][odd][1]
     if i < 43:
-        return base_hexes[5][odd][0] + hex[0] + i - 35, hex[1] + base_hexes[5][odd][1]
+        return base_hexes[5][odd][0] + hexagon[0] + i - 35, hexagon[1] + base_hexes[5][odd][1]
     if i < 50:
-        return base_hexes[6][odd][0] + hex[0] + i - 43, hex[1] + base_hexes[6][odd][1]
+        return base_hexes[6][odd][0] + hexagon[0] + i - 43, hexagon[1] + base_hexes[6][odd][1]
     if i < 56:
-        return base_hexes[7][odd][0] + hex[0] + i - 50, hex[1] + base_hexes[7][odd][1]
+        return base_hexes[7][odd][0] + hexagon[0] + i - 50, hexagon[1] + base_hexes[7][odd][1]
     if i < 61:
-        return base_hexes[8][odd][0] + hex[0] + i - 56, hex[1] + base_hexes[8][odd][1]
+        return base_hexes[8][odd][0] + hexagon[0] + i - 56, hexagon[1] + base_hexes[8][odd][1]
 
 
 hex_by_layer = {}
@@ -93,17 +95,18 @@ def get_action_distribution():
     state = sg.state
 
     for i in range(field_size):
-        hex = i // sg.width, i % sg.width
+        hexagon = i // sg.width, i % sg.width
 
-        if state[hex][player_dict["player_hexes"]] == 0 or sg.unit_type[hex] == 0:
+        if state[hexagon][player_dict["player_hexes"]] == 0 or sg.unit_type[hexagon] == 0:
             unit_movement_order[i] = 0
-            actions[hex][:] = 0  # обнуление всех слоёв возможных ходов
+            actions[hexagon][:] = 0  # обнуление всех слоёв возможных ходов
         else:
-            hexes_with_units.append((hex, unit_movement_order[i]))
+            hexes_with_units.append((hexagon, unit_movement_order[i]))
     hexes_with_units = np.asarray(hexes_with_units)
 
     # после зануления невозможных вероятностей, перенормализуем вектор
-    if len(hexes_with_units) != 0: hexes_with_units[:][1] = hexes_with_units[:][1] / hexes_with_units[:][1].sum()
+    if len(hexes_with_units) != 0:
+        hexes_with_units[:][1] = hexes_with_units[:][1] / hexes_with_units[:][1].sum()
 
     # Нормализация действий проходит по ходу семплирования порядка движения юнитов
     # Так как от порядка зависит возможность и не возможность последующих действий
@@ -121,7 +124,8 @@ def get_action_distribution():
 
 def BFS_for_connectivity(hexagon):
     """
-    Получает все возможные гексагоны, доступные из данного. Включая серые и вражеские. Недоступные вражеские зануляются отдельно.
+    Получает все возможные гексагоны, доступные из данного. Включая серые и вражеские.
+    Недоступные вражеские зануляются отдельно.
     :param hexagon: Гексагон, из которого начинается поиск
     :return: список достижимых гексагонов
     """
@@ -137,12 +141,12 @@ def BFS_for_connectivity(hexagon):
     reached[hexagon[0] - shiftX, hexagon[1] - shiftY] = True
     reachable_hexes.append(hexagon)
     while len(queue) != 0:
-        hex, step = queue.popleft()
+        hexagon, step = queue.popleft()
         if step != 0:
             for i in range(6):
-                adj = sg.getAdjacentHex(hex, i)
+                adj = sg.getAdjacentHex(hexagon, i)
                 if adj is not None and reached[adj[0] - shiftX, adj[1] - shiftY] == 0 and sg.state[adj][
-                    sg.general_dict["black"]] != 1:
+                     sg.general_dict["black"]] != 1:
                     if sg.state[adj][player_dict["player_hexes"]] != 1:
                         reachable_hexes.append(adj)
                         reached[adj[0] - shiftX, adj[1] - shiftY] = True
@@ -154,7 +158,7 @@ def BFS_for_connectivity(hexagon):
     return reachable_hexes
 
 
-def normalise_the_probabilities_of_actions(move, hex):
+def normalise_the_probabilities_of_actions(move, hexagon):
     """
     принимает на вход массив из 61 одного возможного хода и возвращает нормализованный(занулены невозможные ходы и вектор перенормирован)
     Условия, при которых в гексагон перейти нельзя:
@@ -164,24 +168,25 @@ def normalise_the_probabilities_of_actions(move, hex):
     4)Если в целевом гексагоне есть дружественный юнит, нужно проверить возможность слияния.
     Если хотя бы одно из условий выше не выполнено, такой ход зануляется.
     :param move: распределение вероятностей его возможных ходов
-    :param hex: гексагон, в котором стоит юнит
+    :param hexagon: гексагон, в котором стоит юнит
     :return: возвращает пару: нормализованный вектор действий и список возможных ходов
     """
     state = sg.state
     # Имеет смысл сделать поиск в ширину из данного гексагона и определить гексаноны, до которых есть путь.
     # определение тип юнита в клетке:
-    unit_type = sg.unit_type[hex]
+    unit_type = sg.unit_type[hexagon]
     # 1 - крестьянин
     # 2 - копейщик
     # 3 - воин
     # 4 - рыцарь
     active_moves = []
-    reachable_hexes = set(BFS_for_connectivity(hex))
+    reachable_hexes = set(BFS_for_connectivity(hexagon))
 
     for i in range(61):
         hex_to_go = compute_hex_by_layer(i,
-                                         hex)  # МОЖНО УСКОРИТЬ ЕСЛИ ДЕЛАТЬ ПРОВЕРКУ НА ЧЕРНОТУ И НА ВЫПАДЕНИЕ ИЗ КАРТЫ
-        if i == 30: continue  # случай, когда остаёмся на месте
+                                         hexagon)  # МОЖНО УСКОРИТЬ ЕСЛИ ДЕЛАТЬ ПРОВЕРКУ НА ЧЕРНОТУ И НА ВЫПАДЕНИЕ ИЗ КАРТЫ
+        if i == 30:
+            continue  # случай, когда остаёмся на месте
         if hex_to_go not in reachable_hexes or (state[hex_to_go][player_dict["player_hexes"]] == 1
                                                 and (state[hex_to_go][player_dict["ambar"]] == 1
                                                      or state[hex_to_go][player_dict["tower1"]] == 1
@@ -206,39 +211,43 @@ def normalise_the_probabilities_of_actions(move, hex):
         # последний случай, когда клетка серая и доступная - можно ходить
         active_moves.append(i)
 
-    sum = move.sum()
-    if sum != 0:
-        return move[:] / move.sum(), active_moves
+    sum0 = move.sum()
+    if sum0 != 0:
+        return move[:] / sum0, active_moves
     else:
         move[30] = 1  # - вероятность остаться на месте равна 1
         active_moves.append(30)
         return move, active_moves
 
 
-def get_enemy_hex_defence(hex):
+def get_enemy_hex_defence(hexagon):
     """
     Возвращает силу, с которой защищается вражеский гексагон
-    :param hex:
+    :param hexagon:
     :return:
     """
     power = 0
     for i in range(6):
-        adj = sg.getAdjacentHex(hex, i)
-        if adj is None: continue
+        adj = sg.getAdjacentHex(hexagon, i)
+        if adj is None:
+            continue
         power = max(power, sg.unit_type[adj], get_enemy_building(adj))
-    return max(power, sg.unit_type[hex], get_enemy_building(hex))
+    return max(power, sg.unit_type[hexagon], get_enemy_building(hexagon))
 
 
-def get_enemy_building(hex):
+def get_enemy_building(hexagon):
     """
     Возращает силу защиты клетки зданием
-    :param hex:
+    :param hexagon:
     :return:
     """
     state = sg.state
-    if state[hex][adversary_dict["town"]] == 1: return 1
-    if state[hex][adversary_dict["tower1"]] == 1: return 2
-    if state[hex][adversary_dict["tower2"]] == 1: return 3
+    if state[hexagon][adversary_dict["town"]] == 1:
+        return 1
+    if state[hexagon][adversary_dict["tower1"]] == 1:
+        return 2
+    if state[hexagon][adversary_dict["tower2"]] == 1:
+        return 3
     return 0
 
 
@@ -251,11 +260,11 @@ def change_money_in_province(province_index, new_money, pl):
     :return: Изменение слоя
     """
     if pl == player:
-        for hex in player_provinces[province_index]:
-            sg.state[hex][player_dict["money"]] = new_money
+        for hexagon in player_provinces[province_index]:
+            sg.state[hexagon][player_dict["money"]] = new_money
     else:
-        for hex in adversary_provinces[province_index]:
-            sg.state[hex][adversary_dict["money"]] = new_money
+        for hexagon in adversary_provinces[province_index]:
+            sg.state[hexagon][adversary_dict["money"]] = new_money
 
 
 def change_income_in_province(province_index, new_income, pl):
@@ -267,11 +276,11 @@ def change_income_in_province(province_index, new_income, pl):
     :return: Изменение слоя
     """
     if pl == player:
-        for hex in player_provinces[province_index]:
-            sg.state[hex][player_dict["income"]] = new_income
+        for hexagon in player_provinces[province_index]:
+            sg.state[hexagon][player_dict["income"]] = new_income
     else:
-        for hex in adversary_provinces[province_index]:
-            sg.state[hex][adversary_dict["income"]] = new_income
+        for hexagon in adversary_provinces[province_index]:
+            sg.state[hexagon][adversary_dict["income"]] = new_income
 
 
 def merge_provinces(provinces_to_merge, junction_hex):
@@ -298,53 +307,53 @@ def merge_provinces(provinces_to_merge, junction_hex):
     sum_income += 1  # так как добавляется ещё и узловой гексагон
     new_province_list += [junction_hex]
     sg.state[junction_hex][player_dict["player_hexes"]] = 1
-    for hex in new_province_list:
-        sg.state[hex][player_dict["money"]] = sum_money
-        sg.state[hex][player_dict["income"]] = sum_income
-        sg.state[hex][player_dict["province_index"]] = min_index
+    for hexagon in new_province_list:
+        sg.state[hexagon][player_dict["money"]] = sum_money
+        sg.state[hexagon][player_dict["income"]] = sum_income
+        sg.state[hexagon][player_dict["province_index"]] = min_index
 
     player_provinces[min_index] = new_province_list
 
 
-def detect_province_by_hex_with_income(hex, pl):
+def detect_province_by_hex_with_income(hexagon, pl):
     """
     Возвращает провинцию игрока pl, которой лежит hex. Использует BFS
-    :param hex:
+    :param hexagon:
     :param pl:
     :return: Список гексагонов провиннции, доход провинции. Также возвращает маркер, если есть центр провинции
     """
     queue = deque()
     province_hexes = []
     reached = np.zeros((sg.width, sg.height), bool)
-    queue.append(hex)
-    reached[hex] = True
-    province_hexes.append(hex)
-    dict = None
+    queue.append(hexagon)
+    reached[hexagon] = True
+    province_hexes.append(hexagon)
+    diction = None
     has_town = False
     total_income = 0
     if pl == player:
-        dict = player_dict
+        diction = player_dict
     else:
-        dict = adversary_dict
+        diction = adversary_dict
     while len(queue) != 0:
-        hex = queue.popleft()
+        hexagon = queue.popleft()
         # подсчёт расхода клетки:
-        if sg.unit_type[hex] != 0:
-            total_income += unit_food_map[sg.unit_type[hex]]
+        if sg.unit_type[hexagon] != 0:
+            total_income += unit_food_map[sg.unit_type[hexagon]]
         else:
-            if sg.state[hex][dict["tower1"]] == 1:
+            if sg.state[hexagon][diction["tower1"]] == 1:
                 total_income += - 1
-            elif sg.state[hex][dict["tower2"]] == 1:
+            elif sg.state[hexagon][diction["tower2"]] == 1:
                 total_income += -6
-            elif sg.state[hex][dict["ambar"]] == 1:
+            elif sg.state[hexagon][diction["ambar"]] == 1:
                 total_income += 4
-            elif sg.state[hex][sg.general_dict["pine"]] == 1 or sg.state[hex][sg.general_dict["palm"]] == 1:
+            elif sg.state[hexagon][sg.general_dict["pine"]] == 1 or sg.state[hexagon][sg.general_dict["palm"]] == 1:
                 total_income += -1
-            elif sg.state[hex][dict["town"]] == 1:
+            elif sg.state[hexagon][diction["town"]] == 1:
                 has_town = True
         for i in range(6):
-            adj = sg.getAdjacentHex(hex, i)
-            if adj is not None and reached[adj] == False and sg.state[adj][dict["player_hexes"]] == 1:
+            adj = sg.getAdjacentHex(hexagon, i)
+            if adj is not None and reached[adj] is False and sg.state[adj][diction["player_hexes"]] == 1:
                 province_hexes.append(adj)
                 reached[adj] = True
 
@@ -358,28 +367,32 @@ def find_place_for_new_town(province):
     :param province: Индекс провинции
     :return: Гексагон для нового центра
     """
-    for hex in adversary_provinces[province]:
-        if sg.unit_type[hex] != 0: continue
-        if sg.state[hex][adversary_dict["tower1"]] == 0 and sg.state[hex][adversary_dict["tower2"]] and \
-                sg.state[hex][adversary_dict["ambar"]] == 0 and sg.state[hex][sg.general_dict["pine"]] == 0 and \
-                sg.state[hex][sg.general_dict["palm"]] == 0:
-            return hex
+    for hexagon in adversary_provinces[province]:
+        if sg.unit_type[hexagon] != 0:
+            continue
+        if sg.state[hexagon][adversary_dict["tower1"]] == 0 and sg.state[hexagon][adversary_dict["tower2"]] and \
+                sg.state[hexagon][adversary_dict["ambar"]] == 0 and sg.state[hexagon][sg.general_dict["pine"]] == 0 and \
+                sg.state[hexagon][sg.general_dict["palm"]] == 0:
+            return hexagon
 
     sys.exit("Error: no place for town")
 
 
 def perform_one_unit_move(departure_hex, destination_hex, unit_type):
     """
-    Перемещает дружественный юнит в соответсвующую клетку, изменяя при этом состояние игры. При этом считается, что шаг возможен.
-    Также функция может использоваться при создании нового юнита и помещения его в destination_hex. Считаем также, что в изначальном гексагоне
-    юнита уже нет.
+    Перемещает дружественный юнит в соответсвующую клетку, изменяя при этом состояние игры.
+    При этом считается, что шаг возможен.
+    Также функция может использоваться при создании нового юнита и помещения его в destination_hex.
+    Считаем также, что в изначальном гексагоне юнита уже нет.
     На что может повлиять перемещение юнита:
     1)Серая клетка станет дружественной. Если на клетке было дерево, то оно исчезнет.
     2)Юнит перейдёт на дружественную клетку и ничего не изменится, кроме его положения
-    3)Юнит перейдёт на дружественную клетку и срубит дерево, тем самым добавив 3 монеты к деньгам провинции и учеличив её доход на единицу.
-    4)При захвате серой или вражеской клетки возможно соединение нескольких провинций в одну, что приведёт к созданию одной провинции с
-    суммарным доходом(плюс клетка, на которую перешёл юнит) и с суммарными деньгами. Если провинции не слились в любом случае нужно
-    добавить новую клетку в список клеток провинции, из которой ходил юнит.
+    3)Юнит перейдёт на дружественную клетку и срубит дерево, тем самым добавив 3 монеты к деньгам провинции
+     и учеличив её доход на единицу.
+    4)При захвате серой или вражеской клетки возможно соединение нескольких провинций в одну,
+     что приведёт к созданию одной провинции c суммарным доходом(плюс клетка, на которую перешёл юнит) и с суммарными деньгами.
+     Если провинции не слились в любом случае нужно добавить новую клетку в список клеток провинции,
+     из которой ходил юнит.
     При слиянии, итоговая провинция получает индекс равный минимуму из индексов, сливаемых провинций.
     5)Если была захвачена вражеская клетка, то нужно проверить не разоравлись ли провинции при потери клетки. Если это произошло применить соответвующие преобразования:
     a)Добавить новые провинции и задать их параметры в список player_provinces
@@ -388,7 +401,6 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
     :param departure_hex: гексагон из которого отправились в путь.(Когда юнита покупают и сразу ставят, это любой гексагон из исходной провинции)
     :param destination_hex: Целевой гексагон
     :param unit_type: Тип юнита
-    :param unit_index: Его индекс в массиве состояний(in state)
     :return: изменение глобальной переменной SG.state
     """
 
@@ -422,7 +434,6 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                                           pl=player)
                 sg.unit_type[destination_hex] += unit_type
 
-
     # 1,4,5):
     else:
         # необходимо произвести слияние наших клеток если это необходимо:
@@ -430,8 +441,8 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
 
         adjacent_hexes = sg.get_adjacent_hexes(destination_hex)
         adjacent_provinces = []
-        for hex in adjacent_hexes:
-            province = state[hex][player_dict["province_index"]]
+        for hexagon in adjacent_hexes:
+            province = state[hexagon][player_dict["province_index"]]
             if province != 0 and province not in adjacent_provinces:
                 adjacent_provinces.append(province)
         if len(adjacent_provinces) == 1:
@@ -470,8 +481,8 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
             for y in Ax:
                 Ay = sg.get_adjacent_friendly_hexes(y, player)
                 intersect = False
-                for hex in Ay:
-                    if hex in Ax:
+                for hexagon in Ay:
+                    if hexagon in Ax:
                         intersect = True
                         break
                 if not intersect:
@@ -547,7 +558,7 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                             state[destination_hex][adversary_dict["ambar"]] = 0
                             gain = -4
                         elif state[destination_hex][sg.general_dict["pine"]] == 1 or state[destination_hex][
-                            sg.general_dict["palm"]] == 1:
+                             sg.general_dict["palm"]] == 1:
                             state[destination_hex][sg.general_dict["pine"]] = 0
                             state[destination_hex][sg.general_dict["palm"]] = 0
                             gain = 1  # пальма запрещала доход  в этой клетке
@@ -570,17 +581,17 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                     state[destination_hex][adversary_dict["ambar"]] = 0
                     state[destination_hex][adversary_dict["town"]] = 0
                 sg.unit_type[destination_hex] = unit_type
-                lenght = len(root_of_new_province)
-                new_money = state[destination_hex][adversary_dict["money"]] // lenght
-                remainder = state[destination_hex][adversary_dict["money"]] % lenght
-                new_money_list = [new_money for i in range(lenght)]
+                length = len(root_of_new_province)
+                new_money = state[destination_hex][adversary_dict["money"]] // length
+                remainder = state[destination_hex][adversary_dict["money"]] % length
+                new_money_list = [new_money for _ in range(length)]
                 state[destination_hex][adversary_dict["money"]] = 0
                 i = 0
                 while remainder != 0:
                     new_money_list[i] += 1
                     remainder -= 1
                     i += 1
-                    i %= lenght
+                    i %= length
                 # после раскола нужно расположить центры новый провинций
                 # новые провинции получают индексы следующие после максимального
                 key_for_new_province = max(adversary_dict.keys()) + 1
@@ -616,53 +627,45 @@ def move_all_units(actions, hexes_with_units):
     for i in range(len(hexes_with_units)):
         r = np.random.random()
         s = 0
-        for hex in hexes_with_units:
-            s += hex[1]
+        for hexagon in hexes_with_units:
+            s += hexagon[1]
             if r < s:
-                order.append(hex)
-                np.delete(hexes_with_units, hex)
+                order.append(hexagon)
+                np.delete(hexes_with_units, hexagon)
                 hexes_with_units[:][1] = hexes_with_units[:][1] / hexes_with_units[:][1].sum()
                 break
 
     # на каждой итерации делается ход с учетом предыдущих итераций
 
-    for hex in order:
-        actions[hex[0]], active_moves = normalise_the_probabilities_of_actions(actions[hex[0]], hex[0])
+    for hexagon in order:
+        actions[hexagon[0]], active_moves = normalise_the_probabilities_of_actions(actions[hexagon[0]], hexagon[0])
 
         r = np.random.random()
         s = 0
         move = None
         # семплирование возможного хода
         for i in range(len(active_moves)):
-            s += actions[hex[0], active_moves[i]]
+            s += actions[hexagon[0], active_moves[i]]
             if r < s:
                 move = active_moves[i]
         # making move
         if move is not None:
-            if move == 30: continue  # случай, когда стоим на месте
-            move_to_hex = compute_hex_by_layer(move, hex[0])
-            if sg.state[hex[0]][units[0]] == 1:
-                sg.state[hex[0]][units[0]] = 0  # юнит ушёл из гексагона
-                perform_one_unit_move(hex[0], move_to_hex, unit_type=1)
-            if sg.state[hex[0]][units[1]] == 1:
-                sg.state[hex[0]][units[1]] = 0
-                perform_one_unit_move(hex[0], move_to_hex, unit_type=2)
-            if sg.state[hex[0]][units[2]] == 1:
-                sg.state[hex[0]][units[2]] = 0
-                perform_one_unit_move(hex[0], move_to_hex, unit_type=3)
-            if sg.state[hex[0]][units[3]] == 1:
-                sg.state[hex[0]][units[3]] = 0
-                perform_one_unit_move(hex[0], move_to_hex, unit_type=4)
+            if move == 30:
+                continue  # случай, когда стоим на месте
+
+            move_to_hex = compute_hex_by_layer(move, hexagon[0])
+            unit = sg.unit_type[hexagon[0]]
+
+            sg.state[hexagon[0]][unit] = 0
+            sg.unit_type[hexagon[0]] = 0
+            perform_one_unit_move(hexagon[0], move_to_hex, unit_type=unit)
 
 
-
-
-
-def normalise_the_probabilities_of_spending(actions, hex):
+def normalise_the_probabilities_of_spending(actions, hexagon):
     """
-     # 0. unit 1 = 10
-    # 1. unit 3 = 30
-    # 2. unit 2 = 20
+    # 0. unit 1 = 10
+    # 1. unit 2 = 20
+    # 2. unit 3 = 30
     # 3. small tower cost = 15
     # 4. big tower cost = 35
     # 5. unit 4 = 40
@@ -673,26 +676,29 @@ def normalise_the_probabilities_of_spending(actions, hex):
     # будем считать что влюбом случает эти провинции объединятся и почти не важно кто их объединил
     # будем выбивать из двух возмножных акторов, того у кого больше сейчас денег, например
     :param actions: вероятности 8-ми описанных выше действий
-    :param hex: гексагон, где ходим разместить покупку
+    :param hexagon: гексагон, где ходим разместить покупку
     :return:
-     - ?
+     - гексанон провинции, из которой мы тратим деньги. Если hex в нашей провинции, то возращаем его
      - отнормализованные действия
     """
     price_list = np.array([10, 15, 20, 30, 35, 40])
     # случай когда мы в уже в какой-то провинции:
-    if sg.state[hex][player_dict["player_hexes"]] == 1:
-        province = sg.state[hex][player_dict["province_index"]]
+    if sg.state[hexagon][player_dict["player_hexes"]] == 1:
+        province = sg.state[hexagon][player_dict["province_index"]]
 
-        # Проверим не занята ли эта позиция: если занята зданием, то возможно только 7-ое действие, а если занята юнитом то возможны другие
-        if sg.state[hex][player_dict["tower2"]] == 1 or sg.state[hex][player_dict["town"]] == 1 or \
-                sg.state[hex][player_dict["ambar"]] == 1 or sg.state[hex][player_dict["unit4"]] == 1:
+        # Проверим не занята ли эта позиция: если занята зданием,
+        # то возможно только 7-ое действие, а если занята юнитом то возможны другие
+        if sg.state[hexagon][player_dict["tower2"]] == 1 or sg.state[hexagon][player_dict["town"]] == 1 or \
+                sg.state[hexagon][player_dict["ambar"]] == 1 or sg.state[hexagon][player_dict["unit4"]] == 1:
             actions[:] = 0
             actions[7] = 1
 
-            return actions
+            return hexagon, actions
 
-        money = sg.state[hex][player_dict["money"]]
-        # далее можно считать, что у нас, либо свободная клетка, либо дерево, либо башня 1, либо один из трёх юнитов(5 вариантов)
+        money = sg.state[hexagon][player_dict["money"]]
+        # далее можно считать, что у нас, либо свободная клетка,
+        # либо дерево, либо башня 1, либо один из трёх юнитов(5 вариантов)
+
         # на дерево нельзя строить никакие постройки!
         if sg.unit_type != 0:
 
@@ -702,43 +708,43 @@ def normalise_the_probabilities_of_spending(actions, hex):
             actions[:3] = actions[:3] * accepted_units * affordable_units
             # наложил бинарные маски на возможных юнитов и доступных юнитов
             if actions.sum() != 0:
-                return actions[:] / actions.sum()
+                return hexagon, actions[:] / actions.sum()
             else:
                 actions[7] = 1
-                return actions
+                return hexagon, actions
 
-        elif sg.state[hex][player_dict["tower1"]] == 1:
+        elif sg.state[hexagon][player_dict["tower1"]] == 1:
             if money < 35:
-                return None, actions
+                return hexagon, actions
             else:
                 actions[:4] = 0
                 actions[5:7] = 0
-                if actions.sum()!=0:
-                    return actions[:]/actions.sum()
+                if actions.sum() != 0:
+                    return hexagon, actions[:] / actions.sum()
                 else:
                     actions[7] = 1
-                    return (hex, province),actions
-        elif sg.state[hex][sg.general_dict["pine"]] == 1 or sg.state[hex][sg.general_dict["palm"]] == 1:
+                    return hexagon, actions
+        elif sg.state[hexagon][sg.general_dict["pine"]] == 1 or sg.state[hexagon][sg.general_dict["palm"]] == 1:
             # на дерево нельзя ставить никакие здания(четвёртого юнита потенциально можно)
             actions[3:5] = 0
             actions[6] = 0
             affordable_units = price_list[:3] <= money
             actions[:3] = actions[:3] * affordable_units
-            if money<40:
+            if money < 40:
                 actions[5] = 0
             if actions.sum() != 0:
-                return actions[:] / actions.sum()
+                return hexagon, actions[:] / actions.sum()
             else:
                 actions[7] = 1
-                return actions
+                return hexagon, actions
         else:
             affordable_actions = price_list <= money
             actions[:6] = actions[:6] * affordable_actions
             # есть ли рядом амбар или городской центр?
-            if player_ambar_cost[province]<= money:
+            if player_ambar_cost[province] <= money:
                 near_ambar = False
                 for i in range(6):
-                    adj = sg.getAdjacentHex(hex,i)
+                    adj = sg.getAdjacentHex(hexagon, i)
                     if adj is not None:
                         if sg.state[adj][player_dict["ambar"]] == 1 or sg.state[adj][player_dict["town"]] == 1:
                             near_ambar = True
@@ -751,58 +757,108 @@ def normalise_the_probabilities_of_spending(actions, hex):
                 return actions[:] / actions.sum()
             else:
                 actions[7] = 1
-                return actions
+                return hexagon, actions
     else:
         # когда хотим потратить деньги во вражескую или в серую клетку
-        adjacent_hexes = sg.get_adjacent_hexes(hex)
-        adjacent_provinces = []
-        for hex in adjacent_hexes:
-            province = sg.state[hex][player_dict["province_index"]]
+        adjacent_hexes = sg.get_adjacent_hexes(hexagon)
+        adjacent_provinces = []  # пара - смежный с hex гексагон, лежащий в другой провинции
+        for hexagon in adjacent_hexes:
+            province = sg.state[hexagon][player_dict["province_index"]]
             if province != 0 and province not in adjacent_provinces:
-                adjacent_provinces.append(province)
+                adjacent_provinces.append(hexagon)
         if len(adjacent_provinces) == 0:
             actions[:] = 0
             actions[7] = 1
-            return actions
-        # далее нужно разобраться находится ли гексагон во вражеской провинции, и действовать с учётом ближайших дружественных клеток
+            return hexagon, actions
+        # далее нужно разобраться находится ли гексагон во вражеской провинции,
+        # и действовать с учётом ближайших дружественных клеток
 
         # найдем провинцию от имени, которой действуем по принципу максимального числа денег
-        max = -10000
-        active_province = None
-        for province in adjacent_provinces:
-            if sg.state[player_provinces[province][0]][player_dict["money"]] > max:
-                active_province = province
-                max = sg.state[player_provinces[province][0]][player_dict["money"]]
-        money = sg.state[player_provinces[active_province][0]][player_dict["money"]]
+        max0 = -10000
+        active_province_hex = None
+        for hexagon in adjacent_provinces:
+            if sg.state[hexagon][player_dict["money"]] > max0:
+                active_province_hex = hexagon
+                max0 = sg.state[hexagon][player_dict["money"]]
+        money = sg.state[active_province_hex][player_dict["money"]]
         # здания ставить нельзя:
         actions[3:5] = 0
         actions[6] = 0
         affordable_units = price_list[:3] <= money
         if money < 40:
-            actions[5] = 0 # юнита 4 нельзя
+            actions[5] = 0  # юнита 4 нельзя
 
-        if  sg.state[hex][sg.general_dict["gray"]] == 1:
+        if sg.state[hexagon][sg.general_dict["gray"]] == 1:
             # ставим любого доступного юнита
             actions[:3] = actions[:3] * affordable_units
         else:
             # вражеская клетка
-            defence = get_enemy_hex_defence(hex)
-            strong_enough = [1,2,3] >= defence
+            defence = get_enemy_hex_defence(hexagon)
+            strong_enough = [1, 2, 3] >= defence
             actions[:3] = actions[:3] * affordable_units * strong_enough
 
         if actions.sum() != 0:
-            return actions[:] / actions.sum()
+            return active_province_hex, actions[:] / actions.sum()
         else:
             actions[7] = 1
-            return actions
-def spend_money_on_hex(hex, action):
+            return active_province_hex, actions
+
+
+def spend_money_on_hex(hexagon, spend_hex, action):
+    """
+    Изменяет состояние игры.
+    # 0. unit1
+    # 1. unit2
+    # 2. unit3
+    # 3. tower1
+    # 4. tower2
+    # 5. unit4
+    # 6. ambar
+    # 7. ничего не делать
+    :param hexagon: гексагон в котором тратят деньги
+    :param action: действие, которое необходимо совершить
+    :param spend_hex: гексагон от имени, которого идёт трата. Если hex лежить в дружеской провинции, то spend_hex == hex
+    :return: изменение состояния игры
+    """
+
+    if action == 7:
+        return
+    elif action < 3 or action == 5:
+        change_money_in_province(sg.state[spend_hex][player_dict["province_index"]],
+                                 new_money=sg.state[spend_hex][player_dict["money"]] - unit_cost_map[
+                                     action_unit_map[action]], pl=player)
+        change_income_in_province(sg.state[spend_hex][player_dict["province_index"]],
+                                  new_income=sg.state[spend_hex][player_dict["income"]] + unit_food_map[
+                                      action_unit_map[action]], pl=player)
+        perform_one_unit_move(departure_hex=spend_hex, destination_hex=hexagon, unit_type=action_unit_map[action])
+    elif action == 3:
+        change_money_in_province(sg.state[spend_hex][player_dict["province_index"]],
+                                 new_money=sg.state[spend_hex][player_dict["money"]] - 15, pl=player)
+        change_income_in_province(sg.state[spend_hex][player_dict["province_index"]],
+                                  new_income=sg.state[spend_hex][player_dict["income"]] - 1, pl=player)
+        sg.state[hexagon][player_dict["tower1"]] = 1
+    elif action == 4:
+        change_money_in_province(sg.state[spend_hex][player_dict["province_index"]],
+                                 new_money=sg.state[spend_hex][player_dict["money"]] - 35, pl=player)
+        change_income_in_province(sg.state[spend_hex][player_dict["province_index"]],
+                                  new_income=sg.state[spend_hex][player_dict["income"]] - 6, pl=player)
+        sg.state[hexagon][player_dict["tower2"]] = 1
+    elif action == 6:
+        change_money_in_province(sg.state[spend_hex][player_dict["province_index"]],
+                                 new_money=sg.state[spend_hex][player_dict["money"]] - player_ambar_cost[
+                                     sg.state[spend_hex][player_dict["province_index"]]], pl=player)
+        change_income_in_province(sg.state[spend_hex][player_dict["province_index"]],
+                                  new_income=sg.state[spend_hex][player_dict["income"]] + 4, pl=player)
+    return
 
 
 def spend_all_money(spend_money_matrix, hex_spend_order):
     """
     Тратит деньги во всех провинциях. Для каждого гескагона отдельно
-    :param hex_spend_order: Порядок в котором обходятся гексагоны. Может ещё пригодиться, для короктировки нейро сети(чтобы не давала невозможные ответы)
-    :param spend_money_matrix: Матрица, где каждому гексагону сопоставленно 8 чисел - 7 возможных трат денег и возможность ничего не делать
+    :param hex_spend_order: Порядок в котором обходятся гексагоны.
+     Может ещё пригодиться, для короктировки нейро сети(чтобы не давала невозможные ответы)
+    :param spend_money_matrix:
+    Матрица, где каждому гексагону сопоставленно 8 чисел - 7 возможных трат денег и возможность ничего не делать
 
     :return: Изменение состояния игры
     """
@@ -810,38 +866,40 @@ def spend_all_money(spend_money_matrix, hex_spend_order):
     not_black_hexes = []  # пары: допустимый гексагон и вероятность его выбора
 
     for i in range(len(hex_spend_order)):
-        hex = i // sg.width, i % sg.width
-        if sg.state[hex][sg.general_dict["black"]] == 1:
+        hexagon = i // sg.width, i % sg.width
+        if sg.state[hexagon][sg.general_dict["black"]] == 1:
             hex_spend_order[i] = 0
             # нужно явно занулять такие вероятности, чтобы не выбирала ненулевыми вероятности для невозможных клеток
             continue
-        not_black_hexes.append((hex, hex_spend_order[i]))
+        not_black_hexes.append((hexagon, hex_spend_order[i]))
     not_black_hexes = np.asarray(not_black_hexes)
     for i in range(len(not_black_hexes)):
         r = np.random.random()
         s = 0
-        for hex in not_black_hexes:
-            s += hex[1]
+        for hexagon in not_black_hexes:
+            s += hexagon[1]
             if r < s:
-                order.append(hex[0])
-                np.delete(not_black_hexes, hex)
+                order.append(hexagon[0])
+                np.delete(not_black_hexes, hexagon)
                 not_black_hexes[:][1] = not_black_hexes[:][1] / not_black_hexes[:][1].sum()
                 break
-    # order : каждый элемент - это гексагон и его вероятность выбора
-    for hex in order:
-        spend_money_matrix[hex] = normalise_the_probabilities_of_spending(spend_money_matrix[hex], hex)
+    # order : каждый элемент - это гексагон
+    for hexagon in order:
+        spend_hex, spend_money_matrix[hexagon] = normalise_the_probabilities_of_spending(spend_money_matrix[hexagon],
+                                                                                         hexagon)
         r = np.random.random()
         s = 0
         action = None
 
         # семплирование возможного действия
-        for i in range(len(spend_money_matrix[hex])):
-            s += spend_money_matrix[hex][i] # считаем, что если вероятность действия равна нулю, то его никогда не выбирут
+        for i in range(len(spend_money_matrix[hexagon])):
+            s += spend_money_matrix[hexagon][i]
+            # считаем, что если вероятность действия равна нулю, то его никогда не выбирут
             if r < s:
-                action = spend_money_matrix[hex][i]
+                action = spend_money_matrix[hexagon][i]
                 break
-        if not action is None:
-            spend_money_on_hex(hex, action)
+        if action is not None:
+            spend_money_on_hex(hexagon, spend_hex, action)
         else:
             sys.exit("No accepted action in 'spend_all_money' function")
 
@@ -852,7 +910,7 @@ def make_move(move_player):
     :param move_player: 0 если первый игрок, 1 если второй
     :return: возвращает 1, если у одного из игроков закончились провинции. Иначе 0
     """
-    global player_dict, adversary_dict, player_provinces, player_ambar_cost, player, units, adversary_provinces, adversary
+    global player_dict, adversary_dict, player_provinces, player_ambar_cost, player, adversary_provinces, adversary
     if move_player == 0:
         player = 0
         adversary = 1
@@ -871,8 +929,7 @@ def make_move(move_player):
         adversary_provinces = sg.player1_provinces
         player_ambar_cost = sg.player2_province_ambar_cost
 
-    activity_order, actions, hexes_with_units, \
-    spend_money_matrix, hex_spend_order = get_action_distribution()
+    activity_order, actions, hexes_with_units, spend_money_matrix, hex_spend_order = get_action_distribution()
     activity = np.random.random() > activity_order[0]  # семплирование действия
     if activity == 0:
         move_all_units(actions, hexes_with_units)
