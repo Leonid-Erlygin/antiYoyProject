@@ -146,7 +146,7 @@ def BFS_for_connectivity(hexagon):
             for i in range(6):
                 adj = sg.getAdjacentHex(hexagon, i)
                 if adj is not None and reached[adj[0] - shiftX, adj[1] - shiftY] == 0 and sg.state[adj][
-                     sg.general_dict["black"]] != 1:
+                    sg.general_dict["black"]] != 1:
                     if sg.state[adj][player_dict["player_hexes"]] != 1:
                         reachable_hexes.append(adj)
                         reached[adj[0] - shiftX, adj[1] - shiftY] = True
@@ -558,7 +558,7 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                             state[destination_hex][adversary_dict["ambar"]] = 0
                             gain = -4
                         elif state[destination_hex][sg.general_dict["pine"]] == 1 or state[destination_hex][
-                             sg.general_dict["palm"]] == 1:
+                            sg.general_dict["palm"]] == 1:
                             state[destination_hex][sg.general_dict["pine"]] = 0
                             state[destination_hex][sg.general_dict["palm"]] = 0
                             gain = 1  # пальма запрещала доход  в этой клетке

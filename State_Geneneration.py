@@ -1,10 +1,8 @@
 import numpy as np
 
 import matplotlib.pyplot as plt
-from matplotlib import collections, transforms
 
-S = 200  # площадь описывающего круга(необходимо для координатной системы)
-r = (S / np.pi) ** 0.5
+r = 20  # пикселей
 width = 14  # параметры поля, измеряемые в гексагонах
 height = 22
 
@@ -329,50 +327,85 @@ def drawGame():
     x = np.arange(height)
     y = np.arange(width)
     xy = np.transpose([np.tile(x, len(y)), np.repeat(y, len(x))])
-    color = []
 
-    GRAY = (0.5, 0.5, 0.5)
-    BLACK = (0, 0, 0)
-    BLUE = (0, 0, 0.5)  # игрок 1
-    RED = (0.5, 0, 0)  # игрок 2
-    PINETREE = (0, 0.3, 0)
-    PALMTREE = (0, 0.7, 0)
+    picture_width = 800
+    picture_height = 430
+    dpi = 300
+    hex_size = 0.089
+
+    pictures = {"town": plt.imread('assets/field_elements/castle.png'),
+                "unit1": plt.imread('assets/field_elements/man0.png'),
+                "unit2": plt.imread('assets/field_elements/man1.png'),
+                "unit3": plt.imread('assets/field_elements/man2.png'),
+                "unit4": plt.imread('assets/field_elements/man3.png'),
+                "tower1": plt.imread('assets/field_elements/tower.png'),
+                "tower2": plt.imread('assets/field_elements/strong_tower.png'),
+                "tree": plt.imread('assets/field_elements/palm.png'),
+                "ambar": plt.imread('assets/field_elements/farm1.png'),
+                "grave": plt.imread('assets/field_elements/grave.png')
+                }
+    hexagons = {"black": plt.imread('assets/hex_black.png'),
+                "gray": plt.imread('assets/hex_gray.png'),
+                "blue": plt.imread('assets/hex_blue.png'),
+                "red": plt.imread('assets/hex_red.png'),
+                }
+    entity_distribution = {"unit1": [], "unit2": [], "unit3": [], "unit4": [], "tower1": [], "tower2": [], "tree": [],
+                           "ambar": [], "town": [], "grave": []}
+    fig = plt.figure(figsize=(picture_width / dpi, picture_height / dpi), dpi=dpi)
+
     for hexagon in xy:
         hexagon = int(hexagon[0]), int(hexagon[1])
+        x, y = computeCoordinates(hexagon)
         if state[hexagon][general_dict["black"]] == 1:
-            color.append(BLACK)
-            continue
-        if state[hexagon][P1_dict["player_hexes"]] == 1:
-            color.append(BLUE)
-            continue
-        if state[hexagon][P2_dict["player_hexes"]] == 1:
-            color.append(RED)
-            continue
-        if state[hexagon][general_dict["pine"]] == 1:
-            color.append(PINETREE)
-            continue
-        if state[hexagon][general_dict["palm"]] == 1:
-            color.append(PALMTREE)
-            continue
-        if state[hexagon][general_dict["gray"]] == 1:
-            color.append(GRAY)
-            continue
+            new_ax = fig.add_axes(
+                [x / picture_width, y / picture_height, hex_size, hex_size],
+                zorder=1)
+            new_ax.axis('off')
+            new_ax.imshow(hexagons["black"])
 
-    xy = np.apply_along_axis(computeCoordinates, 1, xy)
+        elif state[hexagon][P1_dict["player_hexes"]] == 1:
+            new_ax = fig.add_axes(
+                [x / picture_width, y / picture_height, hex_size, hex_size],
+                zorder=1)
+            new_ax.axis('off')
+            new_ax.imshow(hexagons["blue"])
+        elif state[hexagon][P2_dict["player_hexes"]] == 1:
+            new_ax = fig.add_axes(
+                [x / picture_width, y / picture_height, hex_size, hex_size],
+                zorder=1)
+            new_ax.axis('off')
+            new_ax.imshow(hexagons["red"])
+        elif state[hexagon][general_dict["gray"]] == 1:
+            new_ax = fig.add_axes(
+                [x / picture_width, y / picture_height, hex_size, hex_size],
+                zorder=1)
+            new_ax.axis('off')
+            new_ax.imshow(hexagons["gray"])
+        if state[hexagon][general_dict["pine"]] == 1 or state[hexagon][general_dict["pine"]] == 1:
+            entity_distribution["tree"].append(hexagon)
+        if unit_type[hexagon] != 0:
+            unit = "unit" + str(unit_type)
+            entity_distribution[unit].append(hexagon)
+        if state[hexagon][P1_dict["tower1"]] == 1:
+            entity_distribution["tower1"].append(hexagon)
+        if state[hexagon][P1_dict["tower2"]] == 1:
+            entity_distribution["tower2"].append(hexagon)
+        if state[hexagon][P1_dict["town"]] == 1:
+            entity_distribution["town"].append(hexagon)
 
-    # Make a list of colors cycling through the default series.
+    entity_distribution["tower2"].append((4, 0))
+    for entity, hex_list in entity_distribution.items():
+        for hexagon in hex_list:
+            x, y = computeCoordinates(hexagon)
+            x -= r / 10
+            y += r / 10
+            new_ax = fig.add_axes(
+                [x / picture_width, y / picture_height, hex_size, hex_size],
+                zorder=2)
+            new_ax.axis('off')
+            new_ax.imshow(pictures[entity])
 
-    fig, ax = plt.subplots()
-
-    col = collections.RegularPolyCollection(6, rotation=0,
-                                            sizes=(S,), offsets=xy,
-                                            transOffset=ax.transData)
-    trans = transforms.Affine2D().scale(fig.dpi / 72.0)
-    col.set_transform(trans)  # the points to pixels transform
-    ax.add_collection(col, autolim=True)
-    col.set_color(color)
-    ax.autoscale_view()
-    ax.set_title('AntiyoyModel')
     plt.xlabel('Ось Х')
     plt.ylabel('Ось Y')
+
     plt.show()
