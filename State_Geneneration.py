@@ -1,5 +1,5 @@
 import numpy as np
-
+np.random.seed(0)
 import matplotlib.pyplot as plt
 
 r = 20  # пикселей
@@ -384,7 +384,7 @@ def drawGame():
         if state[hexagon][general_dict["pine"]] == 1 or state[hexagon][general_dict["pine"]] == 1:
             entity_distribution["tree"].append(hexagon)
         if unit_type[hexagon] != 0:
-            unit = "unit" + str(unit_type)
+            unit = "unit" + str(unit_type[hexagon])
             entity_distribution[unit].append(hexagon)
         if state[hexagon][P1_dict["tower1"]] == 1:
             entity_distribution["tower1"].append(hexagon)
@@ -393,7 +393,6 @@ def drawGame():
         if state[hexagon][P1_dict["town"]] == 1:
             entity_distribution["town"].append(hexagon)
 
-    entity_distribution["tower2"].append((4, 0))
     for entity, hex_list in entity_distribution.items():
         for hexagon in hex_list:
             x, y = computeCoordinates(hexagon)

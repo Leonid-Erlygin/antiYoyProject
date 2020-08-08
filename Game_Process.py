@@ -13,9 +13,10 @@ base_hexes = [
     ((-4, 1), (-3, 1)),  # i<43
     ((-3, 2), (-3, 2)),  # i<50
     ((-3, 3), (-2, 3)),  # i<56
-    (-2, 4), (-2, 4)  # i<61
+    ((-2, 4), (-2, 4))  # i<61
 ]
 player = 0
+
 adversary = 0
 player_provinces = {}
 adversary_provinces = {}
@@ -101,12 +102,19 @@ def get_action_distribution():
             unit_movement_order[i] = 0
             actions[hexagon][:] = 0  # обнуление всех слоёв возможных ходов
         else:
-            hexes_with_units.append((hexagon, unit_movement_order[i]))
-    hexes_with_units = np.asarray(hexes_with_units)
+            hexes_with_units.append([hexagon, unit_movement_order[i]])
+    # hexes_with_units = np.asarray(hexes_with_units)
 
     # после зануления невозможных вероятностей, перенормализуем вектор
     if len(hexes_with_units) != 0:
-        hexes_with_units[:][1] = hexes_with_units[:][1] / hexes_with_units[:][1].sum()
+        if len(hexes_with_units) == 1:
+            hexes_with_units[0][1] = 1
+        else:
+            sum0 = 0
+            for i in range(len(hexes_with_units)):
+                sum0 += hexes_with_units[i][1]
+            for i in range(len(hexes_with_units)):
+                hexes_with_units[i][1] /= sum0
 
     # Нормализация действий проходит по ходу семплирования порядка движения юнитов
     # Так как от порядка зависит возможность и не возможность последующих действий
@@ -628,11 +636,17 @@ def move_all_units(actions, hexes_with_units):
         r = np.random.random()
         s = 0
         for hexagon in hexes_with_units:
+
             s += hexagon[1]
             if r < s:
                 order.append(hexagon)
-                np.delete(hexes_with_units, hexagon)
-                hexes_with_units[:][1] = hexes_with_units[:][1] / hexes_with_units[:][1].sum()
+                hexes_with_units.remove(hexagon)
+                if len(hexes_with_units) != 0:
+                    sum0 = 0
+                    for j in range(len(hexes_with_units)):
+                        sum0 += hexes_with_units[j][1]
+                    for j in range(len(hexes_with_units)):
+                        hexes_with_units[j][1] /= sum0
                 break
 
     # на каждой итерации делается ход с учетом предыдущих итераций
@@ -645,7 +659,7 @@ def move_all_units(actions, hexes_with_units):
         move = None
         # семплирование возможного хода
         for i in range(len(active_moves)):
-            s += actions[hexagon[0], active_moves[i]]
+            s += actions[hexagon[0]][active_moves[i]]
             if r < s:
                 move = active_moves[i]
         # making move
@@ -700,10 +714,10 @@ def normalise_the_probabilities_of_spending(actions, hexagon):
         # либо дерево, либо башня 1, либо один из трёх юнитов(5 вариантов)
 
         # на дерево нельзя строить никакие постройки!
-        if sg.unit_type != 0:
+        if sg.unit_type[hexagon] != 0:
 
             actions[3:7] = 0  # нельзя ставить строение на юнита
-            accepted_units = np.array([1, 2, 3]) + sg.unit_type <= 4  # бинарная маска
+            accepted_units = np.array([1, 2, 3]) + sg.unit_type[hexagon] <= 4  # бинарная маска
             affordable_units = price_list[:3] <= money
             actions[:3] = actions[:3] * accepted_units * affordable_units
             # наложил бинарные маски на возможных юнитов и доступных юнитов
@@ -754,17 +768,17 @@ def normalise_the_probabilities_of_spending(actions, hexagon):
             else:
                 actions[6] = 0
             if actions.sum() != 0:
-                return actions[:] / actions.sum()
+                return hexagon, actions[:] / actions.sum()
             else:
                 actions[7] = 1
                 return hexagon, actions
     else:
         # когда хотим потратить деньги во вражескую или в серую клетку
         adjacent_hexes = sg.get_adjacent_hexes(hexagon)
-        adjacent_provinces = []  # пара - смежный с hex гексагон, лежащий в другой провинции
+        adjacent_provinces = []  # смежный с hex гексагон, лежащий в другой провинции
         for hexagon in adjacent_hexes:
             province = sg.state[hexagon][player_dict["province_index"]]
-            if province != 0 and province not in adjacent_provinces:
+            if province != 0 and hexagon not in adjacent_provinces:
                 adjacent_provinces.append(hexagon)
         if len(adjacent_provinces) == 0:
             actions[:] = 0
@@ -794,7 +808,7 @@ def normalise_the_probabilities_of_spending(actions, hexagon):
         else:
             # вражеская клетка
             defence = get_enemy_hex_defence(hexagon)
-            strong_enough = [1, 2, 3] >= defence
+            strong_enough = np.array([1, 2, 3]) >= defence
             actions[:3] = actions[:3] * affordable_units * strong_enough
 
         if actions.sum() != 0:
@@ -871,8 +885,8 @@ def spend_all_money(spend_money_matrix, hex_spend_order):
             hex_spend_order[i] = 0
             # нужно явно занулять такие вероятности, чтобы не выбирала ненулевыми вероятности для невозможных клеток
             continue
-        not_black_hexes.append((hexagon, hex_spend_order[i]))
-    not_black_hexes = np.asarray(not_black_hexes)
+        not_black_hexes.append([hexagon, hex_spend_order[i]])
+
     for i in range(len(not_black_hexes)):
         r = np.random.random()
         s = 0
@@ -880,13 +894,20 @@ def spend_all_money(spend_money_matrix, hex_spend_order):
             s += hexagon[1]
             if r < s:
                 order.append(hexagon[0])
-                np.delete(not_black_hexes, hexagon)
-                not_black_hexes[:][1] = not_black_hexes[:][1] / not_black_hexes[:][1].sum()
+                not_black_hexes.remove(hexagon)
+                sum0 = 0
+                # нормируем оставшиеся
+                for hexag in not_black_hexes:
+                    sum0 += hexag[1]
+
+                for i in range(len(not_black_hexes)):
+                    not_black_hexes[i][1] = not_black_hexes[i][1] / sum0
                 break
     # order : каждый элемент - это гексагон
     for hexagon in order:
         spend_hex, spend_money_matrix[hexagon] = normalise_the_probabilities_of_spending(spend_money_matrix[hexagon],
                                                                                          hexagon)
+
         r = np.random.random()
         s = 0
         action = None
@@ -896,7 +917,7 @@ def spend_all_money(spend_money_matrix, hex_spend_order):
             s += spend_money_matrix[hexagon][i]
             # считаем, что если вероятность действия равна нулю, то его никогда не выбирут
             if r < s:
-                action = spend_money_matrix[hexagon][i]
+                action = i
                 break
         if action is not None:
             spend_money_on_hex(hexagon, spend_hex, action)
@@ -904,7 +925,7 @@ def spend_all_money(spend_money_matrix, hex_spend_order):
             sys.exit("No accepted action in 'spend_all_money' function")
 
 
-def make_move(move_player):
+def make_move(move_player, seed):
     """
     Совершает ход игроком
     :param move_player: 0 если первый игрок, 1 если второй
@@ -929,6 +950,7 @@ def make_move(move_player):
         adversary_provinces = sg.player1_provinces
         player_ambar_cost = sg.player2_province_ambar_cost
 
+    np.random.seed(seed)
     activity_order, actions, hexes_with_units, spend_money_matrix, hex_spend_order = get_action_distribution()
     activity = np.random.random() > activity_order[0]  # семплирование действия
     if activity == 0:
