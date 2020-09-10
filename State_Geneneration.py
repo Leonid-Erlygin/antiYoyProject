@@ -70,7 +70,8 @@ def getAdjacentHex(hexagon, direction):
             return None
         if hexagon[1] % 2 == 1:
             return hexagon[0] + 1, hexagon[1] - 1
-
+        else:
+            return hexagon[0],hexagon[1] - 1
 
 def get_adjacent_hexes(hexagon):
     """
