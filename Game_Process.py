@@ -301,14 +301,16 @@ def merge_provinces(provinces_to_merge, junction_hex):
     - Необходимо задать доход и деньги итоговой провинции в матрице состояний
     - Удалить старые провинции из словаря
     - Добавить новую провинцию в словарь
+    - Удалить старые городские центры
     :param junction_hex: Гексагон, который привёл к слиянию
     :param provinces_to_merge:
     :return: изменяет словари и состояние игры
     """
     min_index = min(provinces_to_merge)
+    new_province_list = []
     sum_money = 0
     sum_income = 0
-    new_province_list = []
+
     for province in provinces_to_merge:
         sample_hex = player_provinces[province][0]
         sum_money += sg.state[sample_hex][player_dict["money"]]
@@ -320,11 +322,17 @@ def merge_provinces(provinces_to_merge, junction_hex):
     sum_income += 1  # так как добавляется ещё и узловой гексагон
     new_province_list += [junction_hex]
     sg.state[junction_hex][player_dict["player_hexes"]] = 1
+    first_town = True
     for hexagon in new_province_list:
         sg.state[hexagon][player_dict["money"]] = sum_money
         sg.state[hexagon][player_dict["income"]] = sum_income
         sg.state[hexagon][player_dict["province_index"]] = min_index
-
+        if sg.state[hexagon][player_dict["town"]] == 1:
+            if first_town:
+                first_town = False
+                continue
+            else:
+                sg.state[hexagon][player_dict["town"]] = 0
     player_provinces[min_index] = new_province_list
 
 
@@ -430,8 +438,11 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
     state = sg.state
     unit = "unit" + str(unit_type)
     # 2,3)
-    # if steps == 222:
-    #     x= 1
+    # if destination_hex == (15,6):
+    #     sg.drawGame()
+    #breakpoint()
+
+
     if state[destination_hex][player_dict["player_hexes"]] == 1:
         if state[destination_hex][sg.general_dict["palm"]] == 1 or state[destination_hex][sg.general_dict["pine"]] == 1:
             tree = sg.general_dict["palm"] if sg.general_dict["palm"] == 1 else sg.general_dict["pine"]
@@ -467,15 +478,23 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
         # необходимо произвести слияние наших клеток если это необходимо:
         destination_hex_province = state[destination_hex][adversary_dict["province_index"]]
 
-        adjacent_hexes = sg.get_adjacent_hexes(destination_hex)
+        adjacent_hexes = sg.get_adjacent_friendly_hexes(destination_hex,player)
         adjacent_provinces = []
         for hexagon in adjacent_hexes:
-            # !!! Здесь может быть нулевой гексагон !!!
-            if hexagon is not None:
-                province = state[hexagon][player_dict["province_index"]]
-            else:
-                continue
-            if province != 0 and province not in adjacent_provinces:
+            province = state[hexagon][player_dict["province_index"]]
+
+            if province not in adjacent_provinces:
+                if province == 0:
+                    # значит добавляем единичную клетку, для этого создадим фиктивную провинцию
+                    new_key = max(player_provinces.keys()) + 1
+                    province = new_key
+                    player_provinces[new_key] = [hexagon]
+                    income = 1
+                    if state[hexagon][sg.general_dict["pine"]] ==1 or state[hexagon][sg.general_dict["palm"]] ==1 or \
+                            state[hexagon][sg.general_dict["graves"]] == 1:
+                        income = 0
+                    state[hexagon][player_dict["income"]] = income
+
                 adjacent_provinces.append(province)
         if len(adjacent_provinces) == 1:
             state[destination_hex][player_dict["player_hexes"]] = 1
@@ -496,23 +515,21 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
 
         state[destination_hex][player_dict[unit]] = 1
 
-
         # если переходим в серую клетку, то можно не проверять разбились ли провинции врага
         if state[destination_hex][sg.general_dict["gray"]] == 1:
             # уничтожаем пальму или ёлку
             state[destination_hex][sg.general_dict["pine"]] = 0
             state[destination_hex][sg.general_dict["palm"]] = 0
             state[destination_hex][sg.general_dict["gray"]] = 0
-
+            sg.unit_type[destination_hex] = unit_type
         else:
-            if destination_hex_province == 0:
-                sys.exit("Индекс вражеской провинции не задан")
+
             # переходим во вражескую клетку. Нужно учесть возможный разрыв провинций.
             # также необходимо полностью уничтожить содержимое клетки
 
             root_of_possible_new_province = []
-            Ax = sg.get_adjacent_friendly_hexes(destination_hex, player)
-            gray_direction = 0
+            Ax = sg.get_adjacent_friendly_hexes(destination_hex, not player)
+            gray_direction = None
             for i in range(6):
                 adj = sg.getAdjacentHex(destination_hex, i)
                 if adj not in Ax and adj is not None:
@@ -529,7 +546,9 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
 
             # Теперь нужно понять являются ли эти корни частями разных провинций или они связаны
             actual_roots = []
-            new_detected = {}  # словарь, задающий отображение : корень провинции - список гексагонов
+            new_detected = {}  # словарь, задающий отображение :
+            # корень провинции - (список гексагонов,доход, имеется ли гор центр, число амбаров
+
             state[destination_hex][adversary_dict["player_hexes"]] = 0
             state[destination_hex][adversary_dict["province_index"]] = 0
             state[destination_hex][adversary_dict["income"]] = 0
@@ -538,8 +557,10 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                 ok_roots = []
                 while len(root_of_possible_new_province) != 0:
                     root = root_of_possible_new_province.pop()
-                    province_hexes, _, _, _ = detect_province_by_hex_with_income(root, adversary, 0)
-                    new_detected[root] = province_hexes
+                    province_hexes, income, has_town, number_of_ambars = detect_province_by_hex_with_income(root,
+                                                                                                            adversary,
+                                                                                                            0)
+                    new_detected[root] = (province_hexes, income, has_town, number_of_ambars)
                     for val in root_of_possible_new_province:
                         if val not in province_hexes:
                             ok_roots.append(val)
@@ -557,13 +578,13 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                 state[destination_hex][adversary_dict["money"]] = 0
 
                 # ничего создавать не нужно, просто провинция потеряла клетку и её содержимое(нужно изменить доход, в зависимости от того что было потеряно)
-
-                try:
-                    adversary_provinces[province].remove(destination_hex)
-                except ValueError:
-                    sg.drawGame()
-                    sys.exit()
-                if len(adversary_provinces[province]) == 1:
+                if len(actual_roots) != 0:
+                    try:
+                        adversary_provinces[province].remove(destination_hex)
+                    except ValueError:
+                        sg.drawGame()
+                        sys.exit()
+                if len(actual_roots) != 0 and len(adversary_provinces[province]) == 1:
                     # значит провивинция состояла из двух клеток
                     # в одной из них был городской центр
                     # если центр был в destination_hex, то с последей точкой ничего не происходит, провинция просто исчезает
@@ -576,7 +597,7 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                         state[remainder][adversary_dict["ambar"]] = 0
                         state[remainder][adversary_dict["tower1"]] = 0
                         state[remainder][adversary_dict["tower2"]] = 0
-
+                        state[remainder][adversary_dict["province_index"]] = 0
                         if sg.unit_type[remainder] != 0:
                             remanded_adv_unit = "unit" + str(sg.unit_type[remainder])
                             state[remainder][adversary_dict[remanded_adv_unit]] = 0
@@ -586,11 +607,13 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                         #  значит город в оставшейся клетке и там нужно вырастить дерево
                         state[remainder][adversary_dict["town"]] = 0
                         state[remainder][sg.general_dict["pine"]] = 1
+                        state[remainder][adversary_dict["province_index"]] = 0
                     state[remainder][adversary_dict["money"]] = 0
                     state[remainder][adversary_dict["income"]] = 0
                     del adversary_provinces[province]  # провинция исчезает
 
-                else:
+                elif len(actual_roots) != 0:
+
                     # из вражеской провинции исчезла клетка и необходимо провести преобразования над провинцией
                     # если сломали городской центр нужно поставить новый в случайном свободном месте(возможно изменим)
                     adv_unit = sg.unit_type[destination_hex]
@@ -628,12 +651,16 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                             state[new_province_place][adversary_dict["town"]] = 1
                     change_income_in_province(province_index=province, new_income=gain - 1,
                                               pl=adversary)  # -1 за потерю клетки
+                else:
+
+                    state[destination_hex][sg.general_dict["pine"]] = 0
+                    state[destination_hex][sg.general_dict["palm"]] = 0
+                    state[destination_hex][sg.general_dict["graves"]] = 0
                 sg.unit_type[destination_hex] = unit_type
 
             else:
                 # из одной провинции появилось несколько. Нужно удалить данные о старой провинции:
-                sg.drawGame()
-                breakpoint()
+
                 del adversary_provinces[province]
                 del adversary_ambar_cost[province]
 
@@ -667,17 +694,20 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                 else:
                     key_for_new_province = 1
                 i = 0
-                # sg.drawGame()
 
                 for root in actual_roots:
-                    # доход нужно пересчитать нужно пересчитать для каждой оторвавшейся провинции, так как отдельно он не известен
-                    # также нужно прописать новый индекс провинции
-                    pr, income, has_town, number_of_ambars = detect_province_by_hex_with_income(root, adversary,
-                                                                                                key_for_new_province)
+                    # доход нужно пересчитать нужно пересчитать для каждой оторвавшейся провинции, так как отдельно
+                    # он не известен также нужно прописать новый индекс провинции
+                    pr, income, has_town, number_of_ambars = new_detected[root]
+
                     if len(pr) > 1:  # если отвалился один гексагон, его можно выкинуть
                         adversary_provinces[key_for_new_province] = pr
+                        # изменим номер провинции:
+                        for hexagon in pr:
+                            sg.state[hexagon][adversary_dict["province_index"]] = key_for_new_province
                         adversary_ambar_cost[key_for_new_province] = 12 + number_of_ambars * 2
                     else:
+                        state[pr[0]][adversary_dict["province_index"]] = 0
                         if sg.unit_type[pr[0]] == 0:
                             sg.state[pr[0]][adversary_dict["town"]] = 0
                             sg.state[pr[0]][adversary_dict["tower1"]] = 0
@@ -695,6 +725,8 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                         state[place][adversary_dict["town"]] = 1
                     i += 1
                     key_for_new_province += 1
+                # sg.drawGame()
+                # breakpoint()
 
 
 def move_all_units(actions, hexes_with_units):
