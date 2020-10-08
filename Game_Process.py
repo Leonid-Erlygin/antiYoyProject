@@ -1040,7 +1040,7 @@ def spend_money_on_hex(hexagon, spend_hex, action):
         sg.state[hexagon][player_dict["tower1"]] = 1
     elif action == 4:
         gain = 0
-        if sg.state[hexagon][player_dict["tower1"]]!=0:
+        if sg.state[hexagon][player_dict["tower1"]] != 0:
             gain = 1
             sg.state[hexagon][player_dict["tower1"]] = 0
         change_money_in_province(sg.state[spend_hex][player_dict["province_index"]],
@@ -1252,6 +1252,28 @@ def update_before_move():
                                       province], player)
 
 
+def calculate_income_to_check_program():
+    """
+    Вычисляет доход у первого игрока
+    :return:
+    """
+    province_income = {}
+    for province in sg.player1_provinces.keys():
+        income = 0
+        for hexagon in sg.player1_provinces[province]:
+            income += 1  # так как это наша клетка
+            if sg.state[hexagon][sg.general_dict["palm"]] == 1 or sg.state[hexagon][sg.general_dict["pine"]] == 1 or\
+                    sg.state[hexagon][sg.P1_dict["tower1"]] == 1:
+                    income-=1
+            if sg.unit_type[hexagon]!=0:
+                income+=unit_food_map[sg.unit_type[hexagon]]
+            if sg.state[hexagon][sg.P1_dict["tower2"]] == 1:
+                income-=6
+            if sg.state[hexagon][sg.P1_dict["ambar"]] == 1:
+                income+=4
+        province_income[province] = income
+    return province_income
+
 def make_move(move_player, seed, step):
     """
     Совершает ход игроком
@@ -1298,9 +1320,10 @@ def make_move(move_player, seed, step):
         spend_all_money(spend_money_matrix, hex_spend_order)
         move_all_units(actions, hexes_with_units)
     # update_after_move()
-    # if steps == 261:
-    #     sg.drawGame()
-    #     breakpoint()
+    if steps == 868:
+        x = calculate_income_to_check_program()
+        sg.drawGame()
+        breakpoint()
     if len(sg.player1_provinces) == 0 or len(sg.player2_provinces) == 0:
         return 1
     return 0

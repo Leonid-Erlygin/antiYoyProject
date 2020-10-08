@@ -24,7 +24,7 @@ def make_n_moves(n):
 
 sg.generate_random_game()
 start_time = time.time()
-make_n_moves(300)
+make_n_moves(1000)
 
 # !!!
 # !!! В игре старые могилы не сразу превращаются в деревья. Нужно реализовать метод превращения !!!
