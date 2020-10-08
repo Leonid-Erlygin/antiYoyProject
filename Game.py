@@ -4,6 +4,7 @@ import State_Geneneration as sg
 import time
 import matplotlib.pyplot as plt
 
+
 # Замечания:
 # - Нужно штрафовать нейронку, если она выбирает невозможные, по правилам игры, варианты
 # Баги:
@@ -14,22 +15,19 @@ def make_n_moves(n):
     start_time = time.time()
     for i in range(n):
         print(i)
-        # if i == 222:
+        # if i > 20:
         #     sg.drawGame()
-        GP.make_move(i % 2, seed=i, step=i)
-        # if sg.state[14, 7, 20] == 1 and sg.state[14, 7, 27]==0:
-        #     break
-    # sg.drawGame()
+        x = GP.make_move(i % 2, seed=i, step=i)
+        if x == 1:
+            print("Game over!")
 
 
 sg.generate_random_game()
 start_time = time.time()
+make_n_moves(300)
 
-make_n_moves(3000)
-
-
-sg.drawGame()
-
-
+# !!!
+# !!! В игре старые могилы не сразу превращаются в деревья. Нужно реализовать метод превращения !!!
 elapsed_time = time.time() - start_time
+sg.drawGame()
 print(elapsed_time)

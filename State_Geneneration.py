@@ -9,7 +9,7 @@ r = 20  # пикселей
 width = 14  # параметры поля, измеряемые в гексагонах
 height = 22
 
-state = np.zeros((height, width, 29), "uint8")
+state = np.zeros((height, width, 29), "int32")
 unit_type = np.zeros((height, width),
                      "uint8")  # вспомогательный массив, указывающий тип юнита находящегося в данной клетке
 # юнит либо у игрока 1, либо у игрока 2
@@ -28,7 +28,11 @@ player2_province_ambar_cost = {}
 
 activeHexes = []
 
+tree_list = []
 
+units_list = []
+
+graves_list = []
 def getAdjacentHex(hexagon, direction):
     if direction == 0:
         if hexagon[1] == 0:
@@ -188,6 +192,7 @@ def isNearWater(hexagon):
 def spawnTree(hexagon):
     global activeHexes
     global state
+    tree_list.append(hexagon)
     if isNearWater(hexagon):
         state[hexagon][general_dict["palm"]] = 1  # Добавил пальму
     else:
@@ -301,6 +306,7 @@ def spawnProvinces():
         for fraction in range(2):
             hexagon = findGoodPlaceForNewProvince(fraction)
             state[hexagon][P1_dict["player_hexes"] if fraction == 0 else P2_dict["player_hexes"]] = 1
+            state[hexagon][P1_dict["town"] if fraction == 0 else P2_dict["town"]] = 1 # в этом гексагоне есть город
             state[hexagon][general_dict["gray"]] = 0  # теперь гексагон не серый
             spawnProvince(hexagon, fraction + 1)  # игрок 2 имеет приемущество это нужно для баланса
 
@@ -345,24 +351,18 @@ def drawGame():
                 "unit4": plt.imread('assets/field_elements/man3.png'),
                 "tower1": plt.imread('assets/field_elements/tower.png'),
                 "tower2": plt.imread('assets/field_elements/strong_tower.png'),
-                "tree": plt.imread('assets/field_elements/palm.png'),
+                "palm": plt.imread('assets/field_elements/palm.png'),
+                "pine": plt.imread('assets/field_elements/pine.png'),
                 "ambar": plt.imread('assets/field_elements/farm1.png'),
                 "grave": plt.imread('assets/field_elements/grave.png')
                 }
-    hexagons = {"black": plt.imread('assets/hex_black.png'),
-                "gray": plt.imread('assets/hex_gray.png'),
-                "blue": plt.imread('assets/hex_blue.png'),
-                "red": plt.imread('assets/hex_red.png'),
-                }
-    entity_distribution = {"unit1": [], "unit2": [], "unit3": [], "unit4": [], "tower1": [], "tower2": [], "tree": [],
+    entity_distribution = {"unit1": [], "unit2": [], "unit3": [], "unit4": [], "tower1": [], "tower2": [], "palm": [],"pine":[],
                            "ambar": [], "town": [], "grave": []}
     fig = plt.figure(figsize=(picture_width / dpi, picture_height / dpi), dpi=dpi)
 
     ax = fig.add_axes([0, 0, picture_width / dpi, picture_height / dpi], zorder=1)
     ax.axis('off')
-
     color = []
-
     GRAY = (0.5, 0.5, 0.5)
     BLACK = (0, 0, 0)
     BLUE = (0, 0, 0.5)  # игрок 1
@@ -370,14 +370,13 @@ def drawGame():
     scaleX = 2135
     scaleY = 615
     sizeScale = 24
-    shiftX = 35/2100
-    shiftY = 16/500
+    shiftX = 35 / 2100
+    shiftY = 16 / 500
     coordins = []
-    i = 0
     for hexagon in xy:
         hexagon = int(hexagon[0]), int(hexagon[1])
         x, y = computeCoordinates(hexagon)
-        coordins.append([x/scaleX+shiftX, y/scaleY+shiftY])
+        coordins.append([x / scaleX + shiftX, y / scaleY + shiftY])
         if state[hexagon][general_dict["black"]] == 1:
             color.append(BLACK)
         if state[hexagon][P1_dict["player_hexes"]] == 1:
@@ -386,67 +385,30 @@ def drawGame():
             color.append(RED)
         if state[hexagon][general_dict["gray"]] == 1:
             color.append(GRAY)
-        if state[hexagon][general_dict["pine"]] == 1 or state[hexagon][general_dict["pine"]] == 1:
-            entity_distribution["tree"].append(hexagon)
+        if state[hexagon][general_dict["pine"]] == 1:
+            entity_distribution["pine"].append(hexagon)
+        if state[hexagon][general_dict["palm"]] == 1:
+            entity_distribution["palm"].append(hexagon)
         if unit_type[hexagon] != 0:
             unit = "unit" + str(unit_type[hexagon])
             entity_distribution[unit].append(hexagon)
+        if state[hexagon][general_dict["graves"]] == 1:
+            entity_distribution["grave"].append(hexagon)
         if state[hexagon][P1_dict["tower1"]] == 1 or state[hexagon][P2_dict["tower1"]] == 1:
             entity_distribution["tower1"].append(hexagon)
+        if state[hexagon][P1_dict["ambar"]] == 1 or state[hexagon][P2_dict["ambar"]] == 1:
+            entity_distribution["ambar"].append(hexagon)
         if state[hexagon][P1_dict["tower2"]] == 1 or state[hexagon][P2_dict["tower2"]] == 1:
             entity_distribution["tower2"].append(hexagon)
         if state[hexagon][P1_dict["town"]] == 1 or state[hexagon][P2_dict["town"]] == 1:
             entity_distribution["town"].append(hexagon)
+
     col = collections.RegularPolyCollection(6, rotation=0,
-                                            sizes=((np.pi * r ** 2)/sizeScale,), offsets=coordins,
+                                            sizes=((np.pi * r ** 2) / sizeScale,), offsets=coordins,
                                             transOffset=ax.transData)
-    trans = transforms.Affine2D().scale(1)
-    col.set_transform(trans)  # the points to pixels transform
+
     ax.add_collection(col, autolim=True)
     col.set_color(color)
-    #ax.autoscale_view()
-
-    # for hexagon in xy:
-    #     hexagon = int(hexagon[0]), int(hexagon[1])
-    #     x, y = computeCoordinates(hexagon)
-    #     if state[hexagon][general_dict["black"]] == 1:
-    #
-    #
-    #         new_ax = fig.add_axes(
-    #             [x / picture_width, y / picture_height, hex_size, hex_size],
-    #             zorder=1)
-    #         new_ax.axis('off')
-    #         new_ax.imshow(hexagons["black"])
-    #
-    #     elif state[hexagon][P1_dict["player_hexes"]] == 1:
-    #         new_ax = fig.add_axes(
-    #             [x / picture_width, y / picture_height, hex_size, hex_size],
-    #             zorder=1)
-    #         new_ax.axis('off')
-    #         new_ax.imshow(hexagons["blue"])
-    #     elif state[hexagon][P2_dict["player_hexes"]] == 1:
-    #         new_ax = fig.add_axes(
-    #             [x / picture_width, y / picture_height, hex_size, hex_size],
-    #             zorder=1)
-    #         new_ax.axis('off')
-    #         new_ax.imshow(hexagons["red"])
-    #     elif state[hexagon][general_dict["gray"]] == 1:
-    #         new_ax = fig.add_axes(
-    #             [x / picture_width, y / picture_height, hex_size, hex_size],
-    #             zorder=1)
-    #         new_ax.axis('off')
-    #         new_ax.imshow(hexagons["gray"])
-    #     if state[hexagon][general_dict["pine"]] == 1 or state[hexagon][general_dict["pine"]] == 1:
-    #         entity_distribution["tree"].append(hexagon)
-    #     if unit_type[hexagon] != 0:
-    #         unit = "unit" + str(unit_type[hexagon])
-    #         entity_distribution[unit].append(hexagon)
-    #     if state[hexagon][P1_dict["tower1"]] == 1 or state[hexagon][P2_dict["tower1"]] == 1:
-    #         entity_distribution["tower1"].append(hexagon)
-    #     if state[hexagon][P1_dict["tower2"]] == 1 or state[hexagon][P2_dict["tower2"]] == 1:
-    #         entity_distribution["tower2"].append(hexagon)
-    #     if state[hexagon][P1_dict["town"]] == 1 or state[hexagon][P2_dict["town"]] == 1:
-    #         entity_distribution["town"].append(hexagon)
 
     for entity, hex_list in entity_distribution.items():
         for hexagon in hex_list:
