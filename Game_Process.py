@@ -402,6 +402,7 @@ def detect_province_by_hex_with_income(hexagon, pl, province_index):
 def find_place_for_new_town(province):
     """
     Находит первое попавшееся свободное место для нового городского центра. На вход приходит провинция, в которой уже уничтожили гексагон с центром города
+    Если все места заняты, то возвращает любой гексагон с уничтожением объекта в нём находящемся, c изменением дохода
     :param province: Индекс провинции
     :return: Гексагон для нового центра
     """
@@ -416,7 +417,42 @@ def find_place_for_new_town(province):
                 sg.state[hexagon][sg.general_dict["palm"]] == 0:
             return hexagon
 
-    sys.exit("Error: no place for town")
+    # выбараем случайный гексагон
+
+    to_delete = None
+    for hexagon in adversary_provinces[province]:
+        if sg.state[hexagon][adversary_dict["ambar"]] == 0:
+            to_delete = hexagon
+            break
+    if to_delete is None:
+        hexagon = np.random.choice(adversary_provinces[province])
+        change_income_in_province(province_index=province,
+                                  new_income=sg.state[hexagon][adversary_dict["income"]] - 4, pl=adversary)
+        adversary_ambar_cost[province] -= 2
+        sg.state[hexagon][adversary_dict["ambar"]] = 0
+        return hexagon
+    gain = 0
+    if sg.unit_type[to_delete] != 0:
+        gain = -unit_food_map[sg.unit_type[to_delete]]
+    elif sg.state[to_delete][adversary_dict["tower1"]] == 1:
+        gain = 1
+        sg.state[to_delete][adversary_dict["tower1"]] = 0
+    elif sg.state[to_delete][adversary_dict["tower2"]] == 1:
+        sg.state[to_delete][adversary_dict["tower2"]] = 0
+        gain = 6
+    elif sg.state[to_delete][sg.general_dict["graves"]] == 1:
+        sg.graves_list.remove(to_delete)
+        sg.state[to_delete][sg.general_dict["graves"]] = 0
+    elif sg.state[to_delete][sg.general_dict["pine"]] == 0 or \
+            sg.state[to_delete][sg.general_dict["palm"]] == 0:
+        sg.tree_list.remove(to_delete)
+        gain = 1
+        sg.state[to_delete][sg.general_dict["pine"]] = 0
+        sg.state[to_delete][sg.general_dict["palm"]] = 0
+
+    change_income_in_province(province_index=province,
+                              new_income=sg.state[to_delete][adversary_dict["income"]] + gain, pl=adversary)
+    return to_delete
 
 
 def perform_one_unit_move(departure_hex, destination_hex, unit_type):
@@ -619,11 +655,7 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                         state[remainder][adversary_dict["tower2"]] = 0
                         state[remainder][adversary_dict["province_index"]] = 0
                         if sg.unit_type[remainder] != 0:
-                            remanded_adv_unit = "unit" + str(sg.unit_type[remainder])
-                            state[remainder][adversary_dict[remanded_adv_unit]] = 0
-                            state[remainder][sg.general_dict["graves"]] = 1
-                            sg.graves_list.append(remainder)
-                            sg.unit_type[remainder] = 0
+                            dead_hexes.append(remainder)
                     else:
                         #  значит город в оставшейся клетке и там нужно вырастить дерево
                         state[remainder][adversary_dict["town"]] = 0
@@ -751,7 +783,6 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                             sg.state[pr[0]][adversary_dict["income"]] = 0
                         else:
                             dead_hexes.append(pr[0])  # для последующего убийства юнита в нём
-                            sg.units_list.remove(pr[0])
                         continue
 
                     change_income_in_province(key_for_new_province, income, adversary)
@@ -811,6 +842,8 @@ def move_all_units(actions, hexes_with_units):
         # making move
         if move is not None:
             move_to_hex = compute_hex_by_layer(move, hexagon[0])
+            # if steps == 954 and move_to_hex == (12, 3):
+            #     breakpoint()
             if hexagon[0] == move_to_hex and move != 30:
                 sys.exit("Ошибка в обозначениях!")
             unit = sg.unit_type[hexagon[0]]
@@ -1016,10 +1049,11 @@ def spend_money_on_hex(hexagon, spend_hex, action):
     :param spend_hex: гексагон от имени, которого идёт трата. Если hex лежить в дружеской провинции, то spend_hex == hex
     :return: изменение состояния игры
     """
-    # if steps == 88 and hexagon == (11, 2):
-    #     breakpoint()
+    if steps == 954 and hexagon == (12, 3):
+        breakpoint()
     if action == 7:
         return
+
     elif action < 3 or action == 5:
 
         has_alredy = sg.unit_type[hexagon] > 0
@@ -1194,6 +1228,9 @@ def update_before_move():
             change_money_in_province(sg.state[unit_hex][player_dict["province_index"]], 0, player)
             null_provinces.append(sg.state[unit_hex][player_dict["province_index"]])
             province_casualties.append((sg.state[unit_hex][player_dict["province_index"]], sg.unit_type[unit_hex]))
+            # if steps == 998 and unit_hex == (12,3):
+            #     sg.drawGame()
+            #     breakpoint()
             sg.state[unit_hex][player_dict["unit" + str(sg.unit_type[unit_hex])]] = 0
             sg.unit_type[unit_hex] = 0
             remove_list.append(unit_hex)
@@ -1204,10 +1241,9 @@ def update_before_move():
     for hexagon in dead_hexes:
 
         sg.state[hexagon][player_dict["unit" + str(sg.unit_type[hexagon])]] = 0
+        sg.units_list.remove(hexagon)
         sg.state[hexagon][sg.general_dict["graves"]] = 1
         new_graves.append(hexagon)
-        if hexagon in sg.units_list:
-            sg.units_list.remove(hexagon)
         sg.unit_type[hexagon] = 0
     dead_hexes = []
 
@@ -1257,22 +1293,27 @@ def calculate_income_to_check_program():
     Вычисляет доход у первого игрока
     :return:
     """
-    province_income = {}
-    for province in sg.player1_provinces.keys():
-        income = 0
-        for hexagon in sg.player1_provinces[province]:
-            income += 1  # так как это наша клетка
-            if sg.state[hexagon][sg.general_dict["palm"]] == 1 or sg.state[hexagon][sg.general_dict["pine"]] == 1 or\
-                    sg.state[hexagon][sg.P1_dict["tower1"]] == 1:
-                    income-=1
-            if sg.unit_type[hexagon]!=0:
-                income+=unit_food_map[sg.unit_type[hexagon]]
-            if sg.state[hexagon][sg.P1_dict["tower2"]] == 1:
-                income-=6
-            if sg.state[hexagon][sg.P1_dict["ambar"]] == 1:
-                income+=4
-        province_income[province] = income
-    return province_income
+    province_income_1 = {}
+    province_income_2 = {}
+    for provinces, diction, province_income in zip([sg.player1_provinces, sg.player2_provinces],
+                                                     [sg.P1_dict, sg.P2_dict], [province_income_1, province_income_2]):
+        for province in provinces.keys():
+            income = 0
+            for hexagon in provinces[province]:
+                income += 1  # так как это наша клетка
+                if sg.state[hexagon][sg.general_dict["palm"]] == 1 or sg.state[hexagon][sg.general_dict["pine"]] == 1 or \
+                        sg.state[hexagon][diction["tower1"]] == 1:
+                    income -= 1
+                if sg.unit_type[hexagon] != 0:
+                    income += unit_food_map[sg.unit_type[hexagon]]
+                if sg.state[hexagon][diction["tower2"]] == 1:
+                    income -= 6
+                if sg.state[hexagon][diction["ambar"]] == 1:
+                    income += 4
+            province_income[province] = income
+
+    return province_income_1, province_income_2
+
 
 def make_move(move_player, seed, step):
     """
@@ -1320,8 +1361,8 @@ def make_move(move_player, seed, step):
         spend_all_money(spend_money_matrix, hex_spend_order)
         move_all_units(actions, hexes_with_units)
     # update_after_move()
-    if steps == 868:
-        x = calculate_income_to_check_program()
+    if steps == 9999:
+        x, y = calculate_income_to_check_program()
         sg.drawGame()
         breakpoint()
     if len(sg.player1_provinces) == 0 or len(sg.player2_provinces) == 0:
