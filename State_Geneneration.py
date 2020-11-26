@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 from matplotlib import collections, transforms
 
-np.random.seed(0)
+
 
 r = 20  # пикселей
 width = 14  # параметры поля, измеряемые в гексагонах
@@ -31,7 +31,8 @@ activeHexes = []
 tree_list = []
 
 units_list = []
-
+p1_units_list = []
+p2_units_list = []
 graves_list = []
 def getAdjacentHex(hexagon, direction):
     if direction == 0:
@@ -311,7 +312,8 @@ def spawnProvinces():
             spawnProvince(hexagon, fraction + 1)  # игрок 2 имеет приемущество это нужно для баланса
 
 
-def generate_random_game():
+def generate_random_game(seed):
+    np.random.seed(seed)
     global activeHexes
     global state
     # Далее createLand() - создание серых клеток
@@ -328,7 +330,7 @@ def generate_random_game():
     addTrees()
 
     spawnProvinces()
-
+    drawGame()
     # Некотрые функции ниже я пропускаю так как считаю их лишними
 
 
