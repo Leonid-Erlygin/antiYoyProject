@@ -3,34 +3,57 @@ import Game_Process as GP
 import State_Geneneration as sg
 import time
 import matplotlib.pyplot as plt
-
+from numpy.random import MT19937
+from numpy.random import RandomState, SeedSequence
 
 # Замечания:
 # - Нужно штрафовать нейронку, если она выбирает невозможные, по правилам игры, варианты
 # Баги:
-# - Лажа с индесами провинций, нужно тщательно проверить как они изменяются и что вообще происходит при разрыве провинции
-# - Есть скриншот, где не создался город, хотя в провинции есть 2 клетки
+# Деньги пересчитываются не правильно
+rs = RandomState(MT19937(SeedSequence(0)))
+
 
 def make_n_moves(n):
     for i in range(n):
-        print(i)
-        x = GP.make_move(i % 2, seed=i, step=i)
+        # print(i)
+        x = GP.make_move(i % 2, seed=i, step=i, rs0=rs)
         if x == 1:
-            print("Game over! Player {} wins!".format((i + 1) % 2))
+            print("Game over! Player {} wins!, with {}, steps".format((i + 1) % 2, i))
+            break
 
 
-sg.generate_random_game(1)
-start_time = time.time()
-make_n_moves(10000)
+def seed_range_test(low, high):
+    for i in np.arange(low, high):
+        print("The seed is {}".format(i))
+        global rs
+        del rs
+        rs = sg.generate_random_game(i, need_to_draw=False)
+        make_n_moves(12000)
+        # sg.drawGame()
+        sg.state_zeroing()
 
-# !!! на ходе 9999 незанулённый амбар игрока 2
-# !!! когда провинция игрока удоляется, необходимо удалять соответвующий элемент в player_province_ambar_cost
-# !!! если игрок не сделал за 50 ходов ни одного хода юнитом, то он проигрывает
 
+def seed_test(seed):
+    global rs
+    del rs
+    rs = sg.generate_random_game(seed, need_to_draw=False)
+    make_n_moves(12000)
+    sg.drawGame()
+    sg.state_zeroing()
+
+
+seed_test(300)
+# seed_range_test(150,200)
+
+# exit()
+# start_time = time.time()
 
 # !!! Нужно реализовать, рост деревьев после окончания хода.
 # !!! Деньги при разделе провинций не должны делиться поровну !!!#
-# !!! В игре старые могилы не сразу превращаются в деревья. Нужно реализовать метод превращения(или сразу?) !!!
-elapsed_time = time.time() - start_time
-sg.drawGame()
-print(elapsed_time)
+
+# elapsed_time = time.time() - start_time
+# sg.drawGame()
+# breakpoint()
+# print(elapsed_time)
+# Usefull hash tags:
+# NOT EFFICIENT

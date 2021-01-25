@@ -2,12 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 from matplotlib import collections, transforms
-
-
-
+from numpy.random import MT19937
+from numpy.random import RandomState, SeedSequence
 r = 20  # пикселей
 width = 14  # параметры поля, измеряемые в гексагонах
 height = 22
+rs = RandomState(MT19937(SeedSequence(0)))
 
 state = np.zeros((height, width, 29), "int32")
 unit_type = np.zeros((height, width),
@@ -18,11 +18,11 @@ P1_dict = {"unit1": 4, "unit2": 5, "unit3": 6, "unit4": 7, "player_hexes": 8, "t
 general_dict = {"black": 0, "gray": 1, "palm": 2, "pine": 3, "graves": 28}
 P2_dict = {"unit1": 16, "unit2": 17, "unit3": 18, "unit4": 19, "player_hexes": 20, "tower1": 21, "tower2": 22,
            "ambar": 23, "town": 24, "income": 25, "money": 26, "province_index": 27}
-player1_provinces = {}
-player2_provinces = {}
 
 state[:, :, general_dict["black"]] = 1
 
+player1_provinces = {}
+player2_provinces = {}
 player1_province_ambar_cost = {}
 player2_province_ambar_cost = {}
 
@@ -34,6 +34,10 @@ units_list = []
 p1_units_list = []
 p2_units_list = []
 graves_list = []
+
+p1_last_moved_step = 0
+p2_last_moved_step = 0
+
 def getAdjacentHex(hexagon, direction):
     if direction == 0:
         if hexagon[1] == 0:
@@ -124,7 +128,7 @@ def spawnIsland(start_hex, size):
         hexagon = propagation_list.pop()
         gen[start_hex] = 1
 
-        if np.random.randint(low=0, high=size) > gen_potential[hexagon]:
+        if rs.randint(low=0, high=size) > gen_potential[hexagon]:
             continue
         x = state[hexagon][general_dict["gray"]] != 1
         if x:
@@ -177,7 +181,7 @@ def uniteIslandsWithRoads(centers):
 
 
 def getRandomHexInsideBounds():
-    return np.random.randint(height), np.random.randint(width)
+    return rs.randint(height), rs.randint(width)
 
 
 def isNearWater(hexagon):
@@ -202,7 +206,7 @@ def spawnTree(hexagon):
 
 def addTrees():
     for hexagon in activeHexes:
-        if np.random.rand() < 0.1:
+        if rs.rand() < 0.1 and state[hexagon][P1_dict["town"]] == 0 and state[hexagon][P2_dict["town"]] == 0:
             spawnTree(hexagon)
 
 
@@ -211,7 +215,7 @@ def findGoodPlaceForNewProvince(fraction):
     global state
     if fraction == 0:  # Возвращаю случайный серый гексагон
 
-        return activeHexes[np.random.randint(len(activeHexes))]
+        return activeHexes[rs.randint(len(activeHexes))]
     else:
         moveZoneNumber = (state[:, :, general_dict["gray"]] == 1) * (-1)  # определён только на серых
 
@@ -260,7 +264,7 @@ def spawnProvince(spawn_hex, starting_potential):
     genPotential[spawn_hex] = starting_potential
     while len(propagationList) > 0:
         hexagon = propagationList.pop()
-        if np.random.randint(starting_potential) > genPotential[hexagon]:
+        if rs.randint(starting_potential) > genPotential[hexagon]:
             continue
         state[hexagon][P1_dict["player_hexes"] if isPlayer1 else P2_dict["player_hexes"]] = 1
         if isPlayer1:
@@ -306,14 +310,44 @@ def spawnProvinces():
     for i in range(quantity):
         for fraction in range(2):
             hexagon = findGoodPlaceForNewProvince(fraction)
+            state[hexagon][general_dict["palm"]] = 0
+            state[hexagon][general_dict["pine"]] = 0
+
             state[hexagon][P1_dict["player_hexes"] if fraction == 0 else P2_dict["player_hexes"]] = 1
-            state[hexagon][P1_dict["town"] if fraction == 0 else P2_dict["town"]] = 1 # в этом гексагоне есть город
+            state[hexagon][P1_dict["town"] if fraction == 0 else P2_dict["town"]] = 1  # в этом гексагоне есть город
             state[hexagon][general_dict["gray"]] = 0  # теперь гексагон не серый
             spawnProvince(hexagon, fraction + 1)  # игрок 2 имеет приемущество это нужно для баланса
 
 
-def generate_random_game(seed):
-    np.random.seed(seed)
+def state_zeroing():
+    global state, player1_provinces, player2_provinces,\
+    player1_province_ambar_cost, player2_province_ambar_cost, activeHexes, \
+    tree_list, units_list, p1_units_list, p2_units_list, graves_list
+    state[:, :, :] = 0
+    unit_type[:,:] = 0
+    state[:, :, general_dict["black"]] = 1
+
+    del player1_provinces, player2_provinces,player1_province_ambar_cost,player2_province_ambar_cost,activeHexes, \
+        tree_list,  units_list,p1_units_list,p2_units_list,graves_list
+    player1_provinces = {}
+    player2_provinces = {}
+    player1_province_ambar_cost = {}
+    player2_province_ambar_cost = {}
+
+    activeHexes = []
+
+    tree_list = []
+
+    units_list = []
+    p1_units_list = []
+    p2_units_list = []
+    graves_list = []
+
+
+def generate_random_game(seed,need_to_draw = False):
+    global rs
+    del rs
+    rs = RandomState(seed)
     global activeHexes
     global state
     # Далее createLand() - создание серых клеток
@@ -328,11 +362,12 @@ def generate_random_game(seed):
     # Далее addTrees()
 
     addTrees()
-
     spawnProvinces()
-    drawGame()
-    # Некотрые функции ниже я пропускаю так как считаю их лишними
 
+    if need_to_draw:
+        drawGame()
+    # Некотрые функции ниже я пропускаю так как считаю их лишними
+    return rs
 
 def drawGame():
     global activeHexes
@@ -358,7 +393,8 @@ def drawGame():
                 "ambar": plt.imread('assets/field_elements/farm1.png'),
                 "grave": plt.imread('assets/field_elements/grave.png')
                 }
-    entity_distribution = {"unit1": [], "unit2": [], "unit3": [], "unit4": [], "tower1": [], "tower2": [], "palm": [],"pine":[],
+    entity_distribution = {"unit1": [], "unit2": [], "unit3": [], "unit4": [], "tower1": [], "tower2": [], "palm": [],
+                           "pine": [],
                            "ambar": [], "town": [], "grave": []}
     fig = plt.figure(figsize=(picture_width / dpi, picture_height / dpi), dpi=dpi)
 
