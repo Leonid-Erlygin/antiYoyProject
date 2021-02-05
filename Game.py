@@ -1,53 +1,47 @@
-import numpy as np
-import Game_Process as GP
-import State_Geneneration as sg
-import time
-import matplotlib.pyplot as plt
-from numpy.random import MT19937
-from numpy.random import RandomState, SeedSequence
+import Game_Process as gp
+from state_geneneration import State
 
 # Замечания:
 # - Нужно штрафовать нейронку, если она выбирает невозможные, по правилам игры, варианты
 # Баги:
-# Деньги пересчитываются не правильно
-rs = RandomState(MT19937(SeedSequence(0)))
 
 
-def make_n_moves(n):
+def make_n_moves(game_state, n):
     for i in range(n):
         # print(i)
-        x = GP.make_move(i % 2, seed=i, step=i, rs0=rs)
+        x = gp.make_move(game_state, i % 2, step=i)
         if x == 1:
-            print("Game over! Player {} wins!, with {}, steps".format((i + 1) % 2, i))
+            print("Game over! Player {} wins with {} steps".format((i + 1) % 2, i))
             break
 
 
-def seed_range_test(low, high):
-    for i in np.arange(low, high):
-        print("The seed is {}".format(i))
-        global rs
-        del rs
-        rs = sg.generate_random_game(i, need_to_draw=False)
-        make_n_moves(12000)
-        # sg.drawGame()
-        sg.state_zeroing()
+# def seed_range_test(low, high):
+#     for i in np.arrange(low, high):
+#         print("The seed is {}".format(i))
+#         global rs
+#         del rs
+#         rs = sg.generate_random_game(i, need_to_draw=False)
+#         make_n_moves(12000)
+#         # sg.drawGame()
+#         sg.state_zeroing()
 
 
 def seed_test(seed):
-    global rs
-    del rs
-    rs = sg.generate_random_game(seed, need_to_draw=False)
-    make_n_moves(12000)
-    sg.drawGame()
-    sg.state_zeroing()
+    game_state = State(seed)
+
+    game_state.generate_random_game(need_to_draw=False)
+
+    make_n_moves(game_state, 12000)
+    game_state.drawGame()
 
 
-seed_test(300)
-# seed_range_test(150,200)
+seed_test(1336)
+# seed_range_test(574,600)
 
 # exit()
 # start_time = time.time()
 
+# !!! Теперь игры заканчиваются довольно рано, поэтому нужно отдельно проверять игры с > 10000 ходами
 # !!! Нужно реализовать, рост деревьев после окончания хода.
 # !!! Деньги при разделе провинций не должны делиться поровну !!!#
 
@@ -55,5 +49,5 @@ seed_test(300)
 # sg.drawGame()
 # breakpoint()
 # print(elapsed_time)
-# Usefull hash tags:
+# Useful hash tags:
 # NOT EFFICIENT
