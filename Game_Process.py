@@ -67,7 +67,7 @@ hex_by_layer = {}
 # можно вычислять координаты точке
 
 
-def get_action_distribution():
+def zeroing_apparently_impossible_actions(unit_movement_order, actions):
     """
     Возвращает полное распределение вероятностей для хода из данного состояния. Данные здесь не
     нормализуются. Выдаются вероятности с каким-то распределением. Лишь во время семплирования действий
@@ -76,38 +76,42 @@ def get_action_distribution():
     activity_order - порядок в котором выполняются группа действий: сначала ход всеми юнитами или
     сначала потратить все деньги
     actions - из данной клетки юнит может перейти в 61 другую(включая эту же). Для задания вероятностей
-    переходов используется массив (board_width, board_height, 61)
+    переходов используется массив (board_height, board_width, 61)
     hexes_with_units - массив указывающий в каких гексагонах были юниты в начале хода(может изменяться
     по мере семплирования). Это список пар: гексагон и вероятность сходить из этой клетки
     spend_money_matrix - деньги в каждом гексагоне можно потратить 7-ю способами. Эта матрица задаёт
     вероятности соответсвующих трат. Также есть вероятность ничего не тратить в этом гексагоне - восьмая
     hex_spend_order - порядок в котором будут обходиться клетки, в которых будут потрачены деньги.
     """
+
     # сейчас сгенерирую случайно(равномерно для доступных действий)
-    activity_order = [0.5, 0.5]  # 0 - движение юнитов/1-трата денег
-    field_size = game_state.height * game_state.width
-    unit_movement_order = np.zeros(field_size) + 1.0 / field_size
-    # нормальзация вектора ходов юнитов
+    # activity_order = [0.5, 0.5]  # 0 - движение юнитов/1-трата денег
+    # field_size = game_state.height * game_state.width
+    # unit_movement_order = np.zeros(field_size) + 1.0 / field_size
+    # нормализация вектора ходов юнитов
 
     hexes_with_units = []
 
     # получим матрицу ходов для юнитов
-    actions = np.zeros((game_state.height, game_state.width, 61))
-    mean = np.zeros(61)
-    mean[:] = 1 / 61
-    actions[:, :] = mean
+    # actions = np.zeros((game_state.height, game_state.width, 61))
+    # mean = np.zeros(61)
+    # mean[:] = 1 / 61
+    # actions[:, :] = mean
     # проверка наличия юнита в клетке
-    state = game_state.state
+    # state = game_state.state
 
-    for i in range(field_size):
+    for i in range(game_state.height * game_state.width):
         hexagon = i // game_state.width, i % game_state.width
 
-        if state[hexagon][player_dict["player_hexes"]] == 0 or game_state.unit_type[hexagon] == 0:
-            unit_movement_order[i] = 0
+        if game_state.state[hexagon][player_dict["player_hexes"]] == 0 or game_state.unit_type[hexagon] == 0:
+            unit_movement_order[hexagon] = 0
             actions[hexagon][:] = 0  # обнуление всех слоёв возможных ходов
         else:
-            hexes_with_units.append([hexagon, unit_movement_order[i]])
-    # после зануления невозможных вероятностей, перенормализуем вектор
+            hexes_with_units.append([hexagon, unit_movement_order[hexagon]])
+
+    # после зануления невозможных вероятностей, перенормализуем вектор:
+
+    # NOT EFFICIENT
     if len(hexes_with_units) != 0:
         if len(hexes_with_units) == 1:
             hexes_with_units[0][1] = 1
@@ -126,13 +130,13 @@ def get_action_distribution():
     ######
 
     # генерация порядка траты денег
-    hex_spend_order = np.zeros(field_size) + 1.0 / field_size
-    mean1 = np.zeros(8)
-    mean1[:] = 1 / 8
-    spend_money_matrix = np.zeros((game_state.height, game_state.width, 8))
-    spend_money_matrix[:, :] = mean1
+    # hex_spend_order = np.zeros(field_size) + 1.0 / field_size
+    # mean1 = np.zeros(8)
+    # mean1[:] = 1 / 8
+    # spend_money_matrix = np.zeros((game_state.height, game_state.width, 8))
+    # spend_money_matrix[:, :] = mean1
 
-    return activity_order, actions, hexes_with_units, spend_money_matrix, hex_spend_order
+    return hexes_with_units
 
 
 def BFS_for_connectivity(hexagon):
@@ -1576,9 +1580,23 @@ def init(game_state0, move_player, step):
         adversary_ambar_cost = game_state.player1_province_ambar_cost
 
 
-def make_move(game_state0, move_player, step):
+def make_move(game_state0, move_player, step, activity_order, unit_movement_order,
+              actions, spend_money_matrix, hex_spend_order):
     """
     Совершает ход игроком
+    :param hex_spend_order: порядок, в котором будут обходиться клетки, в которых будут потрачены деньги.
+    array: (game_state.height, game_state.width)
+    :param spend_money_matrix: - деньги в каждом гексагоне можно потратить 7-ю способами. Эта матрица задаёт
+    вероятности соответсвующих трат. Также есть вероятность ничего не тратить в этом гексагоне - восьмая
+    array: (game_state.height, game_state.width, 8)
+    :param actions: из данной клетки юнит может перейти в 61 другую (включая эту же). Для задания вероятностей
+    переходов используется
+    array: (game_state.height, game_state.width, 61)
+    :param unit_movement_order: порядок, в котором дружественные юниты делают свой ход
+    array: (game_state.height, game_state.width)
+    :param activity_order: - порядок, в котором выполняются группа действий: сначала ход всеми юнитами или
+    сначала потратить все деньги
+    list: [p1, p2]
     :param step: Номер шага игры
     :param game_state0: Состояние игры на начало этого хода
     :param move_player: 0 если первый игрок, 1 если второй
@@ -1590,7 +1608,8 @@ def make_move(game_state0, move_player, step):
     if steps > 1:
         update_before_move()
 
-    activity_order, actions, hexes_with_units, spend_money_matrix, hex_spend_order = get_action_distribution()
+    hexes_with_units = zeroing_apparently_impossible_actions(unit_movement_order, actions)
+
     activity = rs.random() > activity_order[0]  # семплирование действия
     # действия перед ходом игрока:
 
