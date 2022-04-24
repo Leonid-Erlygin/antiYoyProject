@@ -31,7 +31,7 @@ def seed_test(seed):
 
     game_state.generate_random_game(need_to_draw=False)
 
-    make_n_moves(game_state, 12000)
+    #make_n_moves(game_state, 12000)
     game_state.drawGame()
 
 
