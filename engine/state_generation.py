@@ -16,7 +16,7 @@ class GameState:
         self.width = width
         self.height = height
         self.rs = RandomState(seed)
-        self.state = np.zeros((self.height, self.width, 29), "int32")
+        self.state_matrix = np.zeros((self.height, self.width, 29), "int32")
 
         self.unit_type = np.zeros(
             (self.height, self.width), "uint8"
@@ -52,7 +52,7 @@ class GameState:
             "province_index": 27,
         }
         self.general_dict = {"black": 0, "gray": 1, "palm": 2, "pine": 3, "graves": 28}
-        self.state[:, :, self.general_dict["black"]] = 1
+        self.state_matrix[:, :, self.general_dict["black"]] = 1
 
         self.player1_provinces = {}
         self.player2_provinces = {}
@@ -147,7 +147,7 @@ class GameState:
         )
         for i in range(6):
             adj = self.getAdjacentHex(hexagon, i)
-            if adj is not None and self.state[adj][layer] == 1:
+            if adj is not None and self.state_matrix[adj][layer] == 1:
                 adjacent.append(adj)
         return adjacent
 
@@ -167,13 +167,13 @@ class GameState:
 
             if self.rs.randint(low=0, high=size) > gen_potential[hexagon]:
                 continue
-            x = self.state[hexagon][self.general_dict["gray"]] != 1
+            x = self.state_matrix[hexagon][self.general_dict["gray"]] != 1
             if x:
                 self.activeHexes.append(hexagon)
-            self.state[hexagon][
+            self.state_matrix[hexagon][
                 self.general_dict["gray"]
             ] = 1  # клетка из чёрной становится серой
-            self.state[hexagon][
+            self.state_matrix[hexagon][
                 self.general_dict["black"]
             ] = 0  # эта клетка больше не чёрная
 
@@ -234,23 +234,23 @@ class GameState:
             adj = self.getAdjacentHex(hexagon, i)
             if adj is None:
                 continue
-            if self.state[adj][self.general_dict["black"]] == 1:
+            if self.state_matrix[adj][self.general_dict["black"]] == 1:
                 return True
         return False
 
     def spawnTree(self, hexagon):
         self.tree_list.append(hexagon)
         if self.isNearWater(hexagon):
-            self.state[hexagon][self.general_dict["palm"]] = 1  # Добавил пальму
+            self.state_matrix[hexagon][self.general_dict["palm"]] = 1  # Добавил пальму
         else:
-            self.state[hexagon][self.general_dict["pine"]] = 1  # Добавил ёлку
+            self.state_matrix[hexagon][self.general_dict["pine"]] = 1  # Добавил ёлку
 
     def addTrees(self):
         for hexagon in self.activeHexes:
             if (
                 self.rs.rand() < 0.1
-                and self.state[hexagon][self.P1_dict["town"]] == 0
-                and self.state[hexagon][self.P2_dict["town"]] == 0
+                and self.state_matrix[hexagon][self.P1_dict["town"]] == 0
+                and self.state_matrix[hexagon][self.P2_dict["town"]] == 0
             ):
                 self.spawnTree(hexagon)
 
@@ -258,7 +258,7 @@ class GameState:
         if fraction == 0:  # Возвращаю случайный серый гексагон
             return self.activeHexes[self.rs.randint(len(self.activeHexes))]
         else:
-            moveZoneNumber = (self.state[:, :, self.general_dict["gray"]] == 1) * (
+            moveZoneNumber = (self.state_matrix[:, :, self.general_dict["gray"]] == 1) * (
                 -1
             )  # определён только на серых
 
@@ -272,7 +272,7 @@ class GameState:
                         adj = self.getAdjacentHex(hexagon, direction)
                         if adj is None:
                             continue
-                        if self.state[adj][self.general_dict["black"]] == 1:
+                        if self.state_matrix[adj][self.general_dict["black"]] == 1:
                             continue
                         if moveZoneNumber[adj] != -1:
                             continue
@@ -290,7 +290,7 @@ class GameState:
             return result
 
     def spawnProvince(self, spawn_hex, starting_potential):
-        isPlayer1 = self.state[spawn_hex][self.P1_dict["player_hexes"]] == 1
+        isPlayer1 = self.state_matrix[spawn_hex][self.P1_dict["player_hexes"]] == 1
         if isPlayer1:
             self.player1_provinces[1] = []
             self.player1_province_ambar_cost[1] = 12
@@ -304,20 +304,20 @@ class GameState:
             hexagon = propagationList.pop()
             if self.rs.randint(starting_potential) > genPotential[hexagon]:
                 continue
-            self.state[hexagon][
+            self.state_matrix[hexagon][
                 self.P1_dict["player_hexes"]
                 if isPlayer1
                 else self.P2_dict["player_hexes"]
             ] = 1
             if isPlayer1:
                 self.player1_provinces[1].append(hexagon)
-                self.state[hexagon][
+                self.state_matrix[hexagon][
                     self.P1_dict["province_index"]
                 ] = 1  # теперь гексагон в первой провинции
             else:
                 self.player2_provinces[1].append(hexagon)
-                self.state[hexagon][self.P2_dict["province_index"]] = 1
-            self.state[hexagon][self.general_dict["gray"]] = 0
+                self.state_matrix[hexagon][self.P2_dict["province_index"]] = 1
+            self.state_matrix[hexagon][self.general_dict["gray"]] = 0
             if genPotential[hexagon] == 0:
                 continue
             for i in range(6):
@@ -325,8 +325,8 @@ class GameState:
                 if (
                     adjHex is not None
                     and propagationList.count(adjHex) == 0
-                    and self.state[adjHex][self.general_dict["black"]] == 0
-                    and self.state[adjHex][self.general_dict["gray"]] == 1
+                    and self.state_matrix[adjHex][self.general_dict["black"]] == 0
+                    and self.state_matrix[adjHex][self.general_dict["gray"]] == 1
                 ):
                     genPotential[adjHex] = genPotential[hexagon] - 1
                     propagationList.append(adjHex)
@@ -335,45 +335,45 @@ class GameState:
         if isPlayer1:
             for hexagon in self.player1_provinces[1]:
                 if (
-                    self.state[hexagon][self.general_dict["palm"]] == 1
-                    or self.state[hexagon][self.general_dict["pine"]] == 1
+                    self.state_matrix[hexagon][self.general_dict["palm"]] == 1
+                    or self.state_matrix[hexagon][self.general_dict["pine"]] == 1
                 ):
                     number_of_trees += 1
             income = len(self.player1_provinces[1]) - number_of_trees
             for hexagon in self.player1_provinces[1]:
-                self.state[hexagon][self.P1_dict["income"]] = income
-                self.state[hexagon][
+                self.state_matrix[hexagon][self.P1_dict["income"]] = income
+                self.state_matrix[hexagon][
                     self.P1_dict["money"]
                 ] = 10  # Количество денег по умолчанию в начале игры
         else:
             for hexagon in self.player2_provinces[1]:
                 if (
-                    self.state[hexagon][self.general_dict["palm"]] == 1
-                    or self.state[hexagon][self.general_dict["pine"]] == 1
+                    self.state_matrix[hexagon][self.general_dict["palm"]] == 1
+                    or self.state_matrix[hexagon][self.general_dict["pine"]] == 1
                 ):
                     number_of_trees += 1
             income = len(self.player2_provinces[1]) - number_of_trees
             for hexagon in self.player2_provinces[1]:
-                self.state[hexagon][self.P2_dict["income"]] = income
-                self.state[hexagon][self.P2_dict["money"]] = 10
+                self.state_matrix[hexagon][self.P2_dict["income"]] = income
+                self.state_matrix[hexagon][self.P2_dict["money"]] = 10
 
     def spawnProvinces(self):
         quantity = 1  # по одной провинции на фракцию
         for i in range(quantity):
             for fraction in range(2):
                 hexagon = self.findGoodPlaceForNewProvince(fraction)
-                self.state[hexagon][self.general_dict["palm"]] = 0
-                self.state[hexagon][self.general_dict["pine"]] = 0
+                self.state_matrix[hexagon][self.general_dict["palm"]] = 0
+                self.state_matrix[hexagon][self.general_dict["pine"]] = 0
 
-                self.state[hexagon][
+                self.state_matrix[hexagon][
                     self.P1_dict["player_hexes"]
                     if fraction == 0
                     else self.P2_dict["player_hexes"]
                 ] = 1
-                self.state[hexagon][
+                self.state_matrix[hexagon][
                     self.P1_dict["town"] if fraction == 0 else self.P2_dict["town"]
                 ] = 1  # в этом гексагоне есть город
-                self.state[hexagon][
+                self.state_matrix[hexagon][
                     self.general_dict["gray"]
                 ] = 0  # теперь гексагон не серый
                 self.spawnProvince(
@@ -452,41 +452,41 @@ class GameState:
             hexagon = int(hexagon[0]), int(hexagon[1])
             x, y = self.computeCoordinates(hexagon)
             coordins.append([x / scaleX + shiftX, y / scaleY + shiftY])
-            if self.state[hexagon][self.general_dict["black"]] == 1:
+            if self.state_matrix[hexagon][self.general_dict["black"]] == 1:
                 color.append(BLACK)
-            if self.state[hexagon][self.P1_dict["player_hexes"]] == 1:
+            if self.state_matrix[hexagon][self.P1_dict["player_hexes"]] == 1:
                 color.append(BLUE)
-            if self.state[hexagon][self.P2_dict["player_hexes"]] == 1:
+            if self.state_matrix[hexagon][self.P2_dict["player_hexes"]] == 1:
                 color.append(RED)
-            if self.state[hexagon][self.general_dict["gray"]] == 1:
+            if self.state_matrix[hexagon][self.general_dict["gray"]] == 1:
                 color.append(GRAY)
-            if self.state[hexagon][self.general_dict["pine"]] == 1:
+            if self.state_matrix[hexagon][self.general_dict["pine"]] == 1:
                 entity_distribution["pine"].append(hexagon)
-            if self.state[hexagon][self.general_dict["palm"]] == 1:
+            if self.state_matrix[hexagon][self.general_dict["palm"]] == 1:
                 entity_distribution["palm"].append(hexagon)
             if self.unit_type[hexagon] != 0:
                 unit = "unit" + str(self.unit_type[hexagon])
                 entity_distribution[unit].append(hexagon)
-            if self.state[hexagon][self.general_dict["graves"]] == 1:
+            if self.state_matrix[hexagon][self.general_dict["graves"]] == 1:
                 entity_distribution["grave"].append(hexagon)
             if (
-                self.state[hexagon][self.P1_dict["tower1"]] == 1
-                or self.state[hexagon][self.P2_dict["tower1"]] == 1
+                self.state_matrix[hexagon][self.P1_dict["tower1"]] == 1
+                or self.state_matrix[hexagon][self.P2_dict["tower1"]] == 1
             ):
                 entity_distribution["tower1"].append(hexagon)
             if (
-                self.state[hexagon][self.P1_dict["ambar"]] == 1
-                or self.state[hexagon][self.P2_dict["ambar"]] == 1
+                self.state_matrix[hexagon][self.P1_dict["ambar"]] == 1
+                or self.state_matrix[hexagon][self.P2_dict["ambar"]] == 1
             ):
                 entity_distribution["ambar"].append(hexagon)
             if (
-                self.state[hexagon][self.P1_dict["tower2"]] == 1
-                or self.state[hexagon][self.P2_dict["tower2"]] == 1
+                self.state_matrix[hexagon][self.P1_dict["tower2"]] == 1
+                or self.state_matrix[hexagon][self.P2_dict["tower2"]] == 1
             ):
                 entity_distribution["tower2"].append(hexagon)
             if (
-                self.state[hexagon][self.P1_dict["town"]] == 1
-                or self.state[hexagon][self.P2_dict["town"]] == 1
+                self.state_matrix[hexagon][self.P1_dict["town"]] == 1
+                or self.state_matrix[hexagon][self.P2_dict["town"]] == 1
             ):
                 entity_distribution["town"].append(hexagon)
 
