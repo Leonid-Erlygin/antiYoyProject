@@ -1,0 +1,8 @@
+
+
+_target_: engine.state_generation.GameState
+seed: ${seed}
+r: 20
+width: 14
+height: 22
+assets_path: /app/assets

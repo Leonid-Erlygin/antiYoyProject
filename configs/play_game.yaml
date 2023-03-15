@@ -1,0 +1,13 @@
+hydra:
+  run:
+    dir: ${exp_dir}
+
+exp_dir: outputs/play_game/play_game_${now:%Y-%m-%d_%H-%M-%S}
+
+seed: 1
+maximum_moves: 5000 
+defaults:
+  - _self_
+  - game_state@game_state: default
+  - player_strategy@players.first.strategy: random 
+  - player_strategy@players.second.strategy: random 

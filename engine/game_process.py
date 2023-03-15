@@ -2,7 +2,7 @@ import numpy as np
 from collections import deque
 import sys
 from numpy.random import RandomState
-from state_geneneration import State
+
 
 # определяет относительный сдвиг для индексации гексагона по номеру слоя
 base_hexes = [
@@ -29,7 +29,7 @@ unit_cost_map = {1: 10, 2: 20, 3: 30, 4: 40}
 action_unit_map = {0: 1, 1: 2, 2: 3, 5: 4}
 steps = 0
 rs = None  # type: RandomState
-game_state = None  # type: State
+
 
 
 def compute_hex_by_layer(i, hexagon):

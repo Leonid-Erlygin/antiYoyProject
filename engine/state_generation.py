@@ -1,15 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import collections
-from numpy.random import MT19937
-from numpy.random import RandomState, SeedSequence
+from numpy.random import RandomState
+from pathlib import Path
 
-
-class State:
-    def __init__(self, seed):
-        self.r = 20  # пикселей
-        self.width = 14  # параметры поля, измеряемые в гексагонах
-        self.height = 22
+class GameState:
+    def __init__(self, seed, r, width, height, assets_path):
+        """
+        params:
+        r - пикселей
+        width, height - параметры поля, измеряемые в гексагонах
+        """
+        self.assets_path = Path(assets_path)
+        self.r = r
+        self.width = width
+        self.height = height
         self.rs = RandomState(seed)
         self.state = np.zeros((self.height, self.width, 29), "int32")
 
@@ -375,28 +380,7 @@ class State:
                     hexagon, fraction + 1
                 )  # игрок 2 имеет приемущество это нужно для баланса
 
-    # def state_zeroing():
-    #     global state, player1_provinces, player2_provinces, \
-    #         player1_province_ambar_cost, player2_province_ambar_cost, activeHexes, \
-    #         tree_list, units_list, p1_units_list, p2_units_list, graves_list
-    #     state[:, :, :] = 0
-    #     unit_type[:, :] = 0
-    #     state[:, :, general_dict["black"]] = 1
-    #
-    # del player1_provinces, player2_provinces, player1_province_ambar_cost, player2_province_ambar_cost,
-    # activeHexes, \ tree_list, units_list, p1_units_list, p2_units_list, graves_list player1_provinces = {}
-    # player2_provinces = {} player1_province_ambar_cost = {} player2_province_ambar_cost = {}
-    #
-    #     activeHexes = []
-    #
-    #     tree_list = []
-    #
-    #     units_list = []
-    #     p1_units_list = []
-    #     p2_units_list = []
-    #     graves_list = []
-
-    def generate_random_game(self, need_to_draw=False):
+    def generate_random_game(self):
         # Далее createLand() - создание серых клеток
         N = 2  # число островов
         centers = []
@@ -411,11 +395,9 @@ class State:
         self.addTrees()
         self.spawnProvinces()
 
-        if need_to_draw:
-            self.drawGame()
         # Некотрые функции ниже я пропускаю так как считаю их лишними
 
-    def drawGame(self):
+    def draw_game(self, plot_save_path: Path):
         x = np.arange(self.height)
         y = np.arange(self.width)
         xy = np.transpose([np.tile(x, len(y)), np.repeat(y, len(x))])
@@ -426,17 +408,17 @@ class State:
         hex_size = 0.089
 
         pictures = {
-            "town": plt.imread("assets/field_elements/castle.png"),
-            "unit1": plt.imread("assets/field_elements/man0.png"),
-            "unit2": plt.imread("assets/field_elements/man1.png"),
-            "unit3": plt.imread("assets/field_elements/man2.png"),
-            "unit4": plt.imread("assets/field_elements/man3.png"),
-            "tower1": plt.imread("assets/field_elements/tower.png"),
-            "tower2": plt.imread("assets/field_elements/strong_tower.png"),
-            "palm": plt.imread("assets/field_elements/palm.png"),
-            "pine": plt.imread("assets/field_elements/pine.png"),
-            "ambar": plt.imread("assets/field_elements/farm1.png"),
-            "grave": plt.imread("assets/field_elements/grave.png"),
+            "town": plt.imread(self.assets_path / "field_elements/castle.png"),
+            "unit1": plt.imread(self.assets_path / "field_elements/man0.png"),
+            "unit2": plt.imread(self.assets_path / "field_elements/man1.png"),
+            "unit3": plt.imread(self.assets_path / "field_elements/man2.png"),
+            "unit4": plt.imread(self.assets_path / "field_elements/man3.png"),
+            "tower1": plt.imread(self.assets_path / "field_elements/tower.png"),
+            "tower2": plt.imread(self.assets_path / "field_elements/strong_tower.png"),
+            "palm": plt.imread(self.assets_path / "field_elements/palm.png"),
+            "pine": plt.imread(self.assets_path / "field_elements/pine.png"),
+            "ambar": plt.imread(self.assets_path / "field_elements/farm1.png"),
+            "grave": plt.imread(self.assets_path / "field_elements/grave.png"),
         }
         entity_distribution = {
             "unit1": [],
@@ -531,4 +513,4 @@ class State:
                 new_ax.axis("off")
                 new_ax.imshow(pictures[entity])
 
-        fig.show()
+        fig.savefig(plot_save_path)
