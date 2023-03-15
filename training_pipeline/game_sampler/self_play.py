@@ -28,10 +28,30 @@ class SelfPlay:
         mcts = Mcts(1)
         for step in range(self.game_max_length):
             who_moves = step % 2
-            activity_order, unit_movement_order, actions, spend_money_matrix, hex_spend_order = mcts.get_action_distribution()
-            x = gp.make_move(game_state, who_moves, step, activity_order, unit_movement_order, actions,
-                             spend_money_matrix, hex_spend_order)
-            action_distribution = [activity_order, unit_movement_order, actions, spend_money_matrix, hex_spend_order]
+            (
+                activity_order,
+                unit_movement_order,
+                actions,
+                spend_money_matrix,
+                hex_spend_order,
+            ) = mcts.get_action_distribution()
+            x = gp.make_move(
+                game_state,
+                who_moves,
+                step,
+                activity_order,
+                unit_movement_order,
+                actions,
+                spend_money_matrix,
+                hex_spend_order,
+            )
+            action_distribution = [
+                activity_order,
+                unit_movement_order,
+                actions,
+                spend_money_matrix,
+                hex_spend_order,
+            ]
 
             game_data.append([game_state.state, action_distribution])
             if x == 1:
@@ -39,7 +59,11 @@ class SelfPlay:
                     z = 1
                 if (step + 1) % 2 == 1:
                     z = -1
-                print("Game over! Player {} wins with {} steps".format((step + 1) % 2, step))
+                print(
+                    "Game over! Player {} wins with {} steps".format(
+                        (step + 1) % 2, step
+                    )
+                )
                 break
 
         return game_data, z

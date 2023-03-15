@@ -1,0 +1,35 @@
+name: base
+channels:
+  - pytorch
+  - anaconda
+  - conda-forge
+  - defaults
+dependencies:
+  - pytorch::pytorch=1.10.2=py3.9_cuda11.3_cudnn8.2.0_0
+  - pytorch::torchvision=0.11.3=py39_cu113
+  - cudatoolkit=11.3.1
+  - psutil
+  - python=3.9.7
+  - conda-forge::termcolor
+  - conda-forge::tensorboard
+  - conda-forge::black
+  - conda-forge::hydra-core
+  - anaconda::ipython
+  - anaconda::path
+  - pip
+  - openblas-devel
+  - tqdm
+  - nose
+  - cython
+  - pysoundfile
+  - pip:
+    - progressbar2
+    - exman~=0.1.9
+    - numpy~=1.20.1
+    - PyYAML~=5.4.1
+    - scipy~=1.6.1
+    - pandas~=1.2.3
+    - tqdm~=4.59.0
+    - imageio~=2.9.0
+    - matplotlib~=3.3.4
+    - seaborn~=0.11.1

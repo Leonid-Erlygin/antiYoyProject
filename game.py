@@ -1,3 +1,5 @@
+
+# %%
 import Game_Process as gp
 from state_geneneration import State
 
@@ -31,11 +33,12 @@ def seed_test(seed):
 
     game_state.generate_random_game(need_to_draw=False)
 
-    #make_n_moves(game_state, 12000)
+    # make_n_moves(game_state, 12000)
+    
     game_state.drawGame()
 
-
-seed_test(1336)
+if __name__ == '__main__':
+    seed_test(1336)
 # seed_range_test(574,600)
 
 # exit()
@@ -51,3 +54,5 @@ seed_test(1336)
 # print(elapsed_time)
 # Useful hash tags:
 # NOT EFFICIENT
+
+# %%
