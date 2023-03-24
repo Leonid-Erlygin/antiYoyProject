@@ -1,23 +1,30 @@
-import sys
+import numpy as np
 
+
+import sys
 sys.path.insert(1, "/app")
 
 from engine.state_generation import GameState
+
 
 
 class MovePerformer:
     """
     Given Action probability distribution p calculates next game state.
     After players moves state matrix S is transformed, so that first feature planes
-    describe current player belongings: S = np.moveaxis(S, [], -1)
+    describe current player belongings.
     """
-
+    
     def __init__(self) -> None:
         pass
 
-    def __call__(self, actions):
-        pass
+    def __call__(self, game_state: GameState, actions):
+        
 
+
+        # change current player after the end of move
+        game_state.state_matrix = np.moveaxis(game_state.state_matrix, game_state.active_player_features, game_state.adversary_player_features)
+        game_state.change_active_player()
 
 class Game:
     def __init__(self, initial_game_state: GameState) -> None:
