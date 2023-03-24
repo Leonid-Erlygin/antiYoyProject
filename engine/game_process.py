@@ -4,7 +4,6 @@ import sys
 from numpy.random import RandomState
 
 
-
 player = 0
 adversary = 0
 player_provinces = {}
@@ -360,10 +359,7 @@ def detect_province_by_hex_with_income(hexagon, pl, province_index):
             elif game_state.state[next_hexagon][diction["ambar"]] == 1:
                 number_of_barns += 1
                 total_income += 4
-            elif (
-                game_state.state[next_hexagon][game_state.general_dict["pine"]] == 1
-                or game_state.state[next_hexagon][game_state.general_dict["palm"]] == 1
-            ):
+            elif game_state.state[next_hexagon][game_state.general_dict["pine"]] == 1:
                 total_income += -1
             elif game_state.state[next_hexagon][diction["town"]] == 1:
                 has_town = True
@@ -401,7 +397,6 @@ def find_place_for_new_town(province):
             and game_state.state[hexagon][adversary_dict["ambar"]] == 0
             and game_state.state[hexagon][game_state.general_dict["graves"]] == 0
             and game_state.state[hexagon][game_state.general_dict["pine"]] == 0
-            and game_state.state[hexagon][game_state.general_dict["palm"]] == 0
         ):
             return hexagon
 
@@ -444,14 +439,10 @@ def find_place_for_new_town(province):
     elif game_state.state[to_delete][game_state.general_dict["graves"]] == 1:
         game_state.graves_list.remove(to_delete)
         game_state.state[to_delete][game_state.general_dict["graves"]] = 0
-    elif (
-        game_state.state[to_delete][game_state.general_dict["pine"]] == 0
-        or game_state.state[to_delete][game_state.general_dict["palm"]] == 0
-    ):
+    elif game_state.state[to_delete][game_state.general_dict["pine"]] == 0:
         game_state.tree_list.remove(to_delete)
         gain = 1
         game_state.state[to_delete][game_state.general_dict["pine"]] = 0
-        game_state.state[to_delete][game_state.general_dict["palm"]] = 0
 
     change_income_in_province(
         province_index=province,
@@ -495,16 +486,9 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
         game_state.graves_list.remove(destination_hex)
 
     if state[destination_hex][player_dict["player_hexes"]] == 1:
-        if (
-            state[destination_hex][game_state.general_dict["palm"]] == 1
-            or state[destination_hex][game_state.general_dict["pine"]] == 1
-        ):
-            tree = (
-                game_state.general_dict["palm"]
-                if game_state.state[destination_hex][game_state.general_dict["palm"]]
-                == 1
-                else game_state.general_dict["pine"]
-            )
+        if state[destination_hex][game_state.general_dict["pine"]] == 1:
+            tree = game_state.general_dict["pine"]
+
             state[destination_hex][tree] = 0
             game_state.tree_list.remove(destination_hex)
             state[destination_hex][player_dict[unit]] = 1
@@ -580,10 +564,7 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                     player_provinces[new_key] = [hexagon]
                     player_ambar_cost[new_key] = 12
                     income = 1
-                    if (
-                        state[hexagon][game_state.general_dict["pine"]] == 1
-                        or state[hexagon][game_state.general_dict["palm"]] == 1
-                    ):
+                    if state[hexagon][game_state.general_dict["pine"]] == 1:
                         income = 0
                     state[hexagon][player_dict["income"]] = income
 
@@ -621,13 +602,9 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
         # если переходим в серую клетку, то можно не проверять разбились ли провинции врага
         if state[destination_hex][game_state.general_dict["gray"]] == 1:
             # уничтожаем пальму или ёлку
-            if (
-                state[destination_hex][game_state.general_dict["palm"]] == 1
-                or state[destination_hex][game_state.general_dict["pine"]] == 1
-            ):
+            if state[destination_hex][game_state.general_dict["pine"]] == 1:
                 game_state.tree_list.remove(destination_hex)
                 state[destination_hex][game_state.general_dict["pine"]] = 0
-                state[destination_hex][game_state.general_dict["palm"]] = 0
             state[destination_hex][game_state.general_dict["gray"]] = 0
             game_state.unit_type[destination_hex] = unit_type
         else:
@@ -727,14 +704,12 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                         state[destination_hex][adversary_dict["tower1"]] = 0
                         state[destination_hex][adversary_dict["tower2"]] = 0
                         state[destination_hex][game_state.general_dict["pine"]] = 0
-                        state[destination_hex][game_state.general_dict["palm"]] = 0
 
                         adv_unit = game_state.unit_type[destination_hex]
                         if adv_unit != 0:
                             state[destination_hex][
                                 adversary_dict["unit" + str(adv_unit)]
                             ] = 0
-                        state[remainder][game_state.general_dict["palm"]] = 1
                         game_state.tree_list.append(remainder)
                         state[remainder][adversary_dict["province_index"]] = 0
 
@@ -775,12 +750,9 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                             gain = -4
                         elif (
                             state[destination_hex][game_state.general_dict["pine"]] == 1
-                            or state[destination_hex][game_state.general_dict["palm"]]
-                            == 1
                         ):
                             game_state.tree_list.remove(destination_hex)
                             state[destination_hex][game_state.general_dict["pine"]] = 0
-                            state[destination_hex][game_state.general_dict["palm"]] = 0
                             gain = 1  # пальма запрещала доход  в этой клетке
                         elif state[destination_hex][adversary_dict["town"]] == 1:
                             state[destination_hex][adversary_dict["town"]] = 0
@@ -798,13 +770,9 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                         pl=adversary,
                     )  # -1 за потерю клетки
                 else:
-                    if (
-                        state[destination_hex][game_state.general_dict["palm"]] == 1
-                        or state[destination_hex][game_state.general_dict["pine"]] == 1
-                    ):
+                    if state[destination_hex][game_state.general_dict["pine"]] == 1:
                         game_state.tree_list.remove(destination_hex)
                         state[destination_hex][game_state.general_dict["pine"]] = 0
-                        state[destination_hex][game_state.general_dict["palm"]] = 0
 
                 game_state.unit_type[destination_hex] = unit_type
 
@@ -826,13 +794,9 @@ def perform_one_unit_move(departure_hex, destination_hex, unit_type):
                     state[destination_hex][adversary_dict["tower2"]] = 0
                     state[destination_hex][adversary_dict["ambar"]] = 0
                     state[destination_hex][adversary_dict["town"]] = 0
-                    if (
-                        state[destination_hex][game_state.general_dict["palm"]] == 1
-                        or state[destination_hex][game_state.general_dict["pine"]] == 1
-                    ):
+                    if state[destination_hex][game_state.general_dict["pine"]] == 1:
                         game_state.tree_list.remove(destination_hex)
                         state[destination_hex][game_state.general_dict["pine"]] = 0
-                        state[destination_hex][game_state.general_dict["palm"]] = 0
                     if state[destination_hex][game_state.general_dict["graves"]] == 1:
                         game_state.graves_list.remove(destination_hex)
                         state[destination_hex][game_state.general_dict["graves"]] = 0
@@ -1084,10 +1048,7 @@ def normalise_the_probabilities_of_spending(actions, hexagon):
                 else:
                     actions[7] = 1
                     return hexagon, actions
-        elif (
-            game_state.state[hexagon][game_state.general_dict["pine"]] == 1
-            or game_state.state[hexagon][game_state.general_dict["palm"]] == 1
-        ):
+        elif game_state.state[hexagon][game_state.general_dict["pine"]] == 1:
             # на дерево нельзя ставить никакие здания(четвёртого юнита потенциально можно)
             actions[3:5] = 0
             actions[6] = 0
@@ -1394,7 +1355,7 @@ def update_after_move():
                 ):
                     valid_list.append(adj)
             new_tree = valid_list[rs.randint(0, len(valid_list))]
-            game_state.state[new_tree][game_state.general_dict["palm"]] = 1
+            game_state.state[new_tree][game_state.general_dict["pine"]] = 1
             game_state.tree_list.append(new_tree)
             province1 = game_state.state[new_tree][game_state.P1_dict["province_index"]]
             province2 = game_state.state[new_tree][game_state.P2_dict["province_index"]]
@@ -1572,7 +1533,7 @@ def update_before_move():
         if player == grave_player:
             game_state.state[grave][game_state.general_dict["graves"]] = 0
             graves_to_remove.append(grave)
-            game_state.state[grave][game_state.general_dict["palm"]] = 1
+            game_state.state[grave][game_state.general_dict["pine"]] = 1
             game_state.tree_list.append(grave)
             province = game_state.state[grave][player_dict["province_index"]]
             if province in province_loss.keys():
@@ -1609,8 +1570,7 @@ def calculate_income_to_check_program():
             for hexagon in provinces[province]:
                 income += 1  # так как это наша клетка
                 if (
-                    game_state.state[hexagon][game_state.general_dict["palm"]] == 1
-                    or game_state.state[hexagon][game_state.general_dict["pine"]] == 1
+                    game_state.state[hexagon][game_state.general_dict["pine"]] == 1
                     or game_state.state[hexagon][diction["tower1"]] == 1
                 ):
                     income -= 1

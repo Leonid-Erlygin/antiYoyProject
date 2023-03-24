@@ -20,7 +20,7 @@ class GameState:
         self.width = width
         self.height = height
         self.rs = RandomState(seed)
-        self.state_matrix = np.zeros((self.height, self.width, 29), "int32")
+        self.state_matrix = np.zeros((self.height, self.width, 28), "int32")
 
         self.unit_type = np.zeros(
             (self.height, self.width), "uint8"
@@ -55,7 +55,7 @@ class GameState:
             "money": 26,
             "province_index": 27,
         }
-        self.general_dict = {"black": 0, "gray": 1, "palm": 2, "pine": 3, "graves": 28}
+        self.general_dict = {"black": 0, "gray": 1, "graves": 2, "pine": 3}
         self.state_matrix[:, :, self.general_dict["black"]] = 1
 
         self.player1_provinces = {}
@@ -244,10 +244,7 @@ class GameState:
 
     def spawnTree(self, hexagon):
         self.tree_list.append(hexagon)
-        if self.isNearWater(hexagon):
-            self.state_matrix[hexagon][self.general_dict["palm"]] = 1  # Добавил пальму
-        else:
-            self.state_matrix[hexagon][self.general_dict["pine"]] = 1  # Добавил ёлку
+        self.state_matrix[hexagon][self.general_dict["pine"]] = 1  # Добавил ёлку
 
     def addTrees(self):
         for hexagon in self.activeHexes:
@@ -340,10 +337,7 @@ class GameState:
         number_of_trees = 0
         if isPlayer1:
             for hexagon in self.player1_provinces[1]:
-                if (
-                    self.state_matrix[hexagon][self.general_dict["palm"]] == 1
-                    or self.state_matrix[hexagon][self.general_dict["pine"]] == 1
-                ):
+                if self.state_matrix[hexagon][self.general_dict["pine"]] == 1:
                     number_of_trees += 1
             income = len(self.player1_provinces[1]) - number_of_trees
             for hexagon in self.player1_provinces[1]:
@@ -353,10 +347,7 @@ class GameState:
                 ] = 10  # Количество денег по умолчанию в начале игры
         else:
             for hexagon in self.player2_provinces[1]:
-                if (
-                    self.state_matrix[hexagon][self.general_dict["palm"]] == 1
-                    or self.state_matrix[hexagon][self.general_dict["pine"]] == 1
-                ):
+                if self.state_matrix[hexagon][self.general_dict["pine"]] == 1:
                     number_of_trees += 1
             income = len(self.player2_provinces[1]) - number_of_trees
             for hexagon in self.player2_provinces[1]:
@@ -368,7 +359,6 @@ class GameState:
         for i in range(quantity):
             for fraction in range(2):
                 hexagon = self.findGoodPlaceForNewProvince(fraction)
-                self.state_matrix[hexagon][self.general_dict["palm"]] = 0
                 self.state_matrix[hexagon][self.general_dict["pine"]] = 0
 
                 self.state_matrix[hexagon][
@@ -433,7 +423,6 @@ class GameState:
             "unit4": [],
             "tower1": [],
             "tower2": [],
-            "palm": [],
             "pine": [],
             "ambar": [],
             "town": [],
@@ -468,8 +457,6 @@ class GameState:
                 color.append(GRAY)
             if self.state_matrix[hexagon][self.general_dict["pine"]] == 1:
                 entity_distribution["pine"].append(hexagon)
-            if self.state_matrix[hexagon][self.general_dict["palm"]] == 1:
-                entity_distribution["palm"].append(hexagon)
             if self.unit_type[hexagon] != 0:
                 unit = "unit" + str(self.unit_type[hexagon])
                 entity_distribution[unit].append(hexagon)
