@@ -4,7 +4,7 @@ hydra:
 
 exp_dir: outputs/play_game/play_game_${now:%Y-%m-%d_%H-%M-%S}
 
-seed: 1
+seed: 0
 maximum_moves: 5000 
 defaults:
   - _self_

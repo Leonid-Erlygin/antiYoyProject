@@ -1,8 +1,12 @@
 import numpy as np
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import collections
 from numpy.random import RandomState
 from pathlib import Path
+
 
 class GameState:
     def __init__(self, seed, r, width, height, assets_path):
@@ -258,7 +262,9 @@ class GameState:
         if fraction == 0:  # Возвращаю случайный серый гексагон
             return self.activeHexes[self.rs.randint(len(self.activeHexes))]
         else:
-            moveZoneNumber = (self.state_matrix[:, :, self.general_dict["gray"]] == 1) * (
+            moveZoneNumber = (
+                self.state_matrix[:, :, self.general_dict["gray"]] == 1
+            ) * (
                 -1
             )  # определён только на серых
 

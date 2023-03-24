@@ -1,4 +1,3 @@
-
 # %%
 import Game_Process as gp
 from state_geneneration import State
@@ -34,10 +33,11 @@ def seed_test(seed):
     game_state.generate_random_game(need_to_draw=False)
 
     # make_n_moves(game_state, 12000)
-    
+
     game_state.drawGame()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     seed_test(1336)
 # seed_range_test(574,600)
 
