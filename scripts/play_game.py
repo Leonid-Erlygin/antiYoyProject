@@ -6,7 +6,7 @@ import sys
 
 sys.path.insert(1, "/app")
 
-from engine.game_dinamics import Game
+from engine.game_dinamics import Game, MovePerformer
 
 
 def get_actions_distribution():
@@ -26,6 +26,7 @@ def play(cfg):
     print(out_image_path)
 
     # game = Game(initial_game_state)
+    # game.play(number_of_moves=10)
 
 
 if __name__ == "__main__":

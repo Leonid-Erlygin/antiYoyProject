@@ -3,6 +3,7 @@
 _target_: engine.state_generation.GameState
 seed: ${seed}
 r: 20
-width: 5 # 14
-height: 5 # 22
+width: 10 # 14
+height: 10 # 22
 assets_path: /app/assets
+move_size: 2

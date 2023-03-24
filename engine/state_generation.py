@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 class GameState:
-    def __init__(self, seed, r, width, height, assets_path):
+    def __init__(self, seed, r, width, height, move_size, assets_path):
         """
         params:
         r - пикселей
@@ -21,6 +21,8 @@ class GameState:
         self.height = height
         self.rs = RandomState(seed)
         self.state_matrix = np.zeros((self.height, self.width, 28), "int32")
+
+        self.move_size = move_size
 
         self.unit_type = np.zeros(
             (self.height, self.width), "uint8"
@@ -80,6 +82,7 @@ class GameState:
             []
         )  # сюда записываются вражеские гексагоны(единичные провинции), которые в начале хода
         # противника будут убиты
+
     def change_active_player(self):
         self.active_player = 0 if self.active_player else 1
         self.adversary_player = not self.active_player
@@ -302,7 +305,9 @@ class GameState:
             return result
 
     def spawnProvince(self, spawn_hex, starting_potential):
-        isPlayer1 = self.state_matrix[spawn_hex][self.active_player_dict["player_hexes"]] == 1
+        isPlayer1 = (
+            self.state_matrix[spawn_hex][self.active_player_dict["player_hexes"]] == 1
+        )
         if isPlayer1:
             self.player1_provinces[1] = []
             self.player1_province_ambar_cost[1] = 12
@@ -328,7 +333,9 @@ class GameState:
                 ] = 1  # теперь гексагон в первой провинции
             else:
                 self.player2_provinces[1].append(hexagon)
-                self.state_matrix[hexagon][self.adversary_player_dict["province_index"]] = 1
+                self.state_matrix[hexagon][
+                    self.adversary_player_dict["province_index"]
+                ] = 1
             self.state_matrix[hexagon][self.general_dict["gray"]] = 0
             if genPotential[hexagon] == 0:
                 continue
@@ -360,7 +367,9 @@ class GameState:
                     number_of_trees += 1
             income = len(self.player2_provinces[1]) - number_of_trees
             for hexagon in self.player2_provinces[1]:
-                self.state_matrix[hexagon][self.adversary_player_dict["income"]] = income
+                self.state_matrix[hexagon][
+                    self.adversary_player_dict["income"]
+                ] = income
                 self.state_matrix[hexagon][self.adversary_player_dict["money"]] = 10
 
     def spawnProvinces(self):
@@ -376,7 +385,9 @@ class GameState:
                     else self.adversary_player_dict["player_hexes"]
                 ] = 1
                 self.state_matrix[hexagon][
-                    self.active_player_dict["town"] if fraction == 0 else self.adversary_player_dict["town"]
+                    self.active_player_dict["town"]
+                    if fraction == 0
+                    else self.adversary_player_dict["town"]
                 ] = 1  # в этом гексагоне есть город
                 self.state_matrix[hexagon][
                     self.general_dict["gray"]
@@ -446,7 +457,7 @@ class GameState:
         BLACK = (0, 0, 0)
         player_to_color = {
             0: (0, 0, 0.5),  # игрок 1 BLUE
-            1: (0.5, 0, 0)  # игрок 2 RED
+            1: (0.5, 0, 0),  # игрок 2 RED
         }
         scaleX = 2135
         scaleY = 615
@@ -462,7 +473,10 @@ class GameState:
                 color.append(BLACK)
             if self.state_matrix[hexagon][self.active_player_dict["player_hexes"]] == 1:
                 color.append(player_to_color[self.active_player])
-            if self.state_matrix[hexagon][self.adversary_player_dict["player_hexes"]] == 1:
+            if (
+                self.state_matrix[hexagon][self.adversary_player_dict["player_hexes"]]
+                == 1
+            ):
                 color.append(player_to_color[self.adversary_player])
             if self.state_matrix[hexagon][self.general_dict["gray"]] == 1:
                 color.append(GRAY)

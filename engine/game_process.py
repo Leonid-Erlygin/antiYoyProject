@@ -1357,8 +1357,12 @@ def update_after_move():
             new_tree = valid_list[rs.randint(0, len(valid_list))]
             game_state.state[new_tree][game_state.general_dict["pine"]] = 1
             game_state.tree_list.append(new_tree)
-            province1 = game_state.state[new_tree][game_state.active_player_dict["province_index"]]
-            province2 = game_state.state[new_tree][game_state.adversary_player_dict["province_index"]]
+            province1 = game_state.state[new_tree][
+                game_state.active_player_dict["province_index"]
+            ]
+            province2 = game_state.state[new_tree][
+                game_state.adversary_player_dict["province_index"]
+            ]
             if province1 != 0:
                 p1_modified_province.append(province1)
             elif province2 != 0:
@@ -1466,7 +1470,10 @@ def update_before_move():
 
         game_state.units_list.remove(hexagon)
 
-        if game_state.state[hexagon][game_state.active_player_dict["player_hexes"]] == 1:
+        if (
+            game_state.state[hexagon][game_state.active_player_dict["player_hexes"]]
+            == 1
+        ):
             game_state.p1_units_list.remove(hexagon)
         else:
             game_state.p2_units_list.remove(hexagon)
@@ -1528,7 +1535,10 @@ def update_before_move():
     province_loss = {}  # потери каждой провинции из-за роста новых деревьев
     for grave in game_state.graves_list:
         grave_player = (
-            0 if game_state.state[grave][game_state.active_player_dict["player_hexes"]] == 1 else 1
+            0
+            if game_state.state[grave][game_state.active_player_dict["player_hexes"]]
+            == 1
+            else 1
         )
         if player == grave_player:
             game_state.state[grave][game_state.general_dict["graves"]] = 0
@@ -1595,12 +1605,20 @@ def game_consistency_check():
         # проверяем, что юниты на правильных местах в массиве состояний:
     if player == 0:
         for hexagon in game_state.p1_units_list:
-            if game_state.state[hexagon][game_state.active_player_dict["player_hexes"]] == 0:
+            if (
+                game_state.state[hexagon][game_state.active_player_dict["player_hexes"]]
+                == 0
+            ):
                 game_state.drawGame()
                 breakpoint()
     else:
         for hexagon in game_state.p2_units_list:
-            if game_state.state[hexagon][game_state.adversary_player_dict["player_hexes"]] == 0:
+            if (
+                game_state.state[hexagon][
+                    game_state.adversary_player_dict["player_hexes"]
+                ]
+                == 0
+            ):
                 game_state.drawGame()
                 breakpoint()
 
@@ -1623,7 +1641,9 @@ def game_consistency_check():
     p2_income = 0
     for province in game_state.player2_provinces.keys():
         hexagon = game_state.player2_provinces[province][0]
-        p2_income += game_state.state[hexagon][game_state.adversary_player_dict["income"]]
+        p2_income += game_state.state[hexagon][
+            game_state.adversary_player_dict["income"]
+        ]
 
     p1_real_income = np.sum(list(x.values()))
     p2_real_income = np.sum(list(y.values()))
