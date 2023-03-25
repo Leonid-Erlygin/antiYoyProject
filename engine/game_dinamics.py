@@ -43,15 +43,45 @@ class MovePerformer:
     def __init__(self) -> None:
         pass
 
-    def __call__(
+    def make_move(
         self,
         game_state: GameState,
-        activity_order,
-        unit_movement_order,
-        unit_move_actions,
-        spend_money_matrix,
-        hex_spend_order,
-    ):
+        activity_order: np.ndarray,
+        unit_movement_order: np.ndarray,
+        unit_move_actions: np.ndarray,
+        spend_money_matrix: np.ndarray,
+        hex_spend_order: np.ndarray,
+    ) -> GameState:
+        r"""
+        Совершает ход активным игроком. Активный игрок - игрок чьи владения вписаны первыми в матрицу состояния
+
+        Args:
+            game_state: Состояние игры на начало хода
+
+            activity_order: порядок, в котором выполняются группа действий: сначала ход всеми юнитами или
+            сначала потратить все деньги
+            list: [p1, p2]
+
+            unit_movement_order: порядок, в котором дружественные юниты делают свой ход
+            array: (game_state.height, game_state.width)
+
+            unit_move_actions: из данной клетки юнит может перейти в N других (включая эту же). Для задания вероятностей
+            переходов используется. Число N - функция от максимальной длины шага юнита.
+            Для длины шага 4 - N=61, для длины шага 2 - N=19
+            array: (game_state.height, game_state.width, N)
+
+            hex_spend_order: порядок, в котором будут обходиться клетки, в которых будут потрачены деньги.
+            array: (game_state.height, game_state.width)
+
+            spend_money_matrix: - деньги в каждом гексагоне можно потратить 7-ю способами. Эта матрица задаёт
+            вероятности соответсвующих трат. Также есть вероятность ничего не тратить в этом гексагоне - восьмая
+            array: (game_state.height, game_state.width, 8)
+
+        Returns:
+            Состояние игры после хода активного игрока
+        """
+        self.make_move()
+
         # change current player after the end of move
         game_state.state_matrix = np.moveaxis(
             game_state.state_matrix,
@@ -78,7 +108,7 @@ class Game:
             ) = get_uniform_action_distribution(
                 self.game_state.height, self.game_state.width, self.game_state.move_size
             )
-            self.game_state = self.mover(
+            self.game_state = self.mover.make_move(
                 self.game_state,
                 activity_order,
                 unit_movement_order,
