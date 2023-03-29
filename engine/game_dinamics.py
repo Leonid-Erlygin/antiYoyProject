@@ -6,6 +6,7 @@ import sys
 sys.path.insert(1, "/app")
 
 from engine.state_generation import GameState
+from engine.move_performer.actions_before_players_move import update_before_move
 
 
 def get_uniform_action_distribution(height, width, move_size):
@@ -40,24 +41,27 @@ class MovePerformer:
     describe current player belongings.
     """
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, initial_game_state: GameState) -> None:
+        r"""
+
+        Args:
+            initial_game_state: Состояние игры до начала хода текущего активного игрока
+        """
+        self.game_state = initial_game_state
 
     def make_move(
         self,
-        game_state: GameState,
         activity_order: np.ndarray,
         unit_movement_order: np.ndarray,
         unit_move_actions: np.ndarray,
         spend_money_matrix: np.ndarray,
         hex_spend_order: np.ndarray,
-    ) -> GameState:
+    ) -> None:
         r"""
-        Совершает ход активным игроком. Активный игрок - игрок чьи владения вписаны первыми в матрицу состояния
+        Совершает ход активным игроком именяя self.game_state.
+        Активный игрок - игрок чьи владения вписаны первыми в матрицу состояния
 
         Args:
-            game_state: Состояние игры на начало хода
-
             activity_order: порядок, в котором выполняются группа действий: сначала ход всеми юнитами или
             сначала потратить все деньги
             list: [p1, p2]
@@ -78,24 +82,19 @@ class MovePerformer:
             array: (game_state.height, game_state.width, 8)
 
         Returns:
-            Состояние игры после хода активного игрока
+            None
         """
-        self.make_move()
+        update_before_move(self.game_state)
 
-        # change current player after the end of move
-        game_state.state_matrix = np.moveaxis(
-            game_state.state_matrix,
-            game_state.active_player_features,
-            game_state.adversary_player_features,
-        )
-        game_state.change_active_player()
-        return game_state
+
+        # change current player after the end of move and transpose state matrix
+        self.game_state.change_active_player()
 
 
 class Game:
     def __init__(self, initial_game_state: GameState) -> None:
         self.game_state = initial_game_state
-        self.mover = MovePerformer()
+        self.mover = MovePerformer(initial_game_state)
 
     def play(self, number_of_moves):
         for _ in range(number_of_moves):
@@ -108,8 +107,7 @@ class Game:
             ) = get_uniform_action_distribution(
                 self.game_state.height, self.game_state.width, self.game_state.move_size
             )
-            self.game_state = self.mover.make_move(
-                self.game_state,
+            self.mover.make_move(
                 activity_order,
                 unit_movement_order,
                 unit_move_actions,

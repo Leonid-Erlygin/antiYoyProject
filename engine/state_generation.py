@@ -17,17 +17,15 @@ class GameState:
         """
         self.assets_path = Path(assets_path)
         self.r = r
+        self.move_size = move_size
         self.width = width
         self.height = height
         self.rs = RandomState(seed)
+
+        # create state matrix
         self.state_matrix = np.zeros((self.height, self.width, 28), "int32")
 
-        self.move_size = move_size
-
-        self.unit_type = np.zeros(
-            (self.height, self.width), "uint8"
-        )  # вспомогательный массив, указывающий тип юнита находящегося в данной клетке
-        # юнит либо у игрока 1, либо у игрока 2
+        # create info dicts
         self.active_player_dict = {
             "unit1": 4,
             "unit2": 5,
@@ -63,29 +61,72 @@ class GameState:
         self.active_player_features = list(self.active_player_dict.values())
         self.adversary_player_features = list(self.adversary_player_dict.values())
 
-        self.active_player = 0
-        self.adversary_player = 1
-
-        self.player1_provinces = {}
-        self.player2_provinces = {}
-        self.player1_province_ambar_cost = {}
-        self.player2_province_ambar_cost = {}
+        # set players anxiluary data
+        self.unit_type = np.zeros(
+            (self.height, self.width), "uint8"
+        )  # вспомогательный массив, указывающий тип юнита находящегося в данной клетке
+        # юнит либо у игрока 1, либо у игрока 2
         self.activeHexes = []
         self.tree_list = []
         self.units_list = []
-        self.p1_units_list = []
-        self.p2_units_list = []
         self.graves_list = []
-        self.p1_last_expanded_step = 0
-        self.p2_last_expanded_step = 0
         self.dead_hexes = (
             []
         )  # сюда записываются вражеские гексагоны(единичные провинции), которые в начале хода
         # противника будут убиты
 
+        self.active_player = 0
+        self.adversary_player = 1
+
+        self.player1_provinces = {}
+        self.active_player_provinces = self.player1_provinces
+
+        self.player2_provinces = {}
+        self.adversary_player_provinces = self.player2_provinces
+
+        self.player1_province_ambar_cost = {}
+        self.active_player_province_ambar_cost = self.player1_province_ambar_cost
+
+        self.player2_province_ambar_cost = {}
+        self.adversary_player_province_ambar_cost = self.player2_province_ambar_cost
+
+        self.p1_units_list = []
+        self.active_player_units_list = self.p1_units_list
+
+        self.p2_units_list = []
+        self.adversary_player_units_list = self.p2_units_list
+
+        # info variables needed to abort game early
+        self.p1_last_expanded_step = 0
+        self.p2_last_expanded_step = 0
+
     def change_active_player(self):
-        self.active_player = 0 if self.active_player else 1
-        self.adversary_player = not self.active_player
+        # swap active player and adversary player
+
+        self.active_player, self.adversary_player = (
+            self.adversary_player,
+            self.active_player,
+        )
+
+        self.active_player_provinces, self.adversary_player_provinces = (
+            self.adversary_player_provinces,
+            self.active_player_provinces,
+        )
+        self.active_province_ambar_cost, self.adversary_province_ambar_cost = (
+            self.adversary_province_ambar_cost,
+            self.active_province_ambar_cost,
+        )
+        self.active_player_units_list, self.adversary_player_units_list = (
+            self.adversary_player_units_list,
+            self.active_player_units_list,
+        )
+
+        # transpose state matrix
+        self.state_matrix = np.moveaxis(
+            self.state_matrix,
+            self.active_player_features,
+            self.adversary_player_features,
+        )
 
     def getAdjacentHex(self, hexagon, direction):
         if direction == 0:
