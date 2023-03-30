@@ -204,3 +204,69 @@ def update_before_move(game_state: GameState):
             - province_loss[province],
             game_state.active_player,
         )
+
+
+def update_after_move(game_state: GameState):
+    """
+    Здесь происходят изменения согласно законам игры:
+    1)Растёт лес
+    :return:
+    """
+    # С вероятностью p каждое дерево заспавнит в случайном месте около себя ещё дерево
+    p = 0.01
+    p1_modified_province = []
+    p2_modified_province = []
+    for tree in game_state.tree_list:
+        if rs.random() < p:
+            valid_list = []
+            for i in range(6):
+                adj = game_state.getAdjacentHex(tree, i)
+                if (
+                    adj is not None
+                    and not game_state.state[adj][game_state.general_dict["black"]]
+                    and game_state.unit_type[adj] == 0
+                ):
+                    valid_list.append(adj)
+            new_tree = valid_list[rs.randint(0, len(valid_list))]
+            game_state.state[new_tree][game_state.general_dict["pine"]] = 1
+            game_state.tree_list.append(new_tree)
+            province1 = game_state.state[new_tree][
+                game_state.active_player_dict["province_index"]
+            ]
+            province2 = game_state.state[new_tree][
+                game_state.adversary_player_dict["province_index"]
+            ]
+            if province1 != 0:
+                p1_modified_province.append(province1)
+            elif province2 != 0:
+                p2_modified_province.append(province2)
+    p1_loss = {}
+    p2_loss = {}
+    for province in p1_modified_province:
+        if province not in p1_loss:
+            p1_loss[province] = 1
+        else:
+            p1_loss[province] += 1
+    for province in p2_modified_province:
+        if province not in p2_loss:
+            p2_loss[province] = 1
+        else:
+            p2_loss[province] += 1
+    for province in p1_loss.keys():
+        change_income_in_province(
+            province,
+            game_state.state[game_state.player1_provinces[province][0]][
+                game_state.active_player_dict["income"]
+            ]
+            - p1_loss[province],
+            0,
+        )
+    for province in p2_loss.keys():
+        change_income_in_province(
+            province,
+            game_state.state[game_state.player2_provinces[province][0]][
+                game_state.adversary_player_dict["income"]
+            ]
+            - p2_loss[province],
+            1,
+        )

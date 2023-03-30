@@ -425,3 +425,107 @@ def perform_one_unit_move(
                         state[place][adversary_dict["town"]] = 1
                     i += 1
                     key_for_new_province += 1
+
+
+def move_all_units(actions, hexes_with_units):
+    """
+    Перемешает всех доступных юнитов
+
+    :param actions: Матрица, где каждому гексагону сопоставляем 61-о число - вероятность перейти в определённое место
+    :param hexes_with_units: гексагоны, в которых есть наши юниты. В этом списке пары - гексагон и вероятность его выбрать первым при обходе поля
+    :return:
+    """
+    order = []
+    # семплирование порядка ходов: на каждом ходе выбирается юнит пропорционально его вероятности
+    # затем он удаляется из списка и из остальных снова можно выбирать следующего
+
+    # здесь предполагается, что в течении хода юниты, которые не двигались продолжат оставаться в своих клетках
+    for i in range(len(hexes_with_units)):
+        r = rs.random()
+        s = 0
+        for hexagon in hexes_with_units:
+            s += hexagon[1]
+            if r < s:
+                order.append(hexagon)
+                hexes_with_units.remove(hexagon)
+                if len(hexes_with_units) != 0:
+                    sum0 = 0
+                    for j in range(len(hexes_with_units)):
+                        sum0 += hexes_with_units[j][1]
+                    for j in range(len(hexes_with_units)):
+                        hexes_with_units[j][1] /= sum0
+                break
+
+    # на каждой итерации делается ход с учетом предыдущих итераций
+
+    for hexagon in order:
+        actions[hexagon[0]], active_moves = normalise_the_probabilities_of_actions(
+            actions[hexagon[0]], hexagon[0]
+        )
+
+        r = rs.random()
+        s = 0
+        move = None
+        # семплирование возможного хода
+        for i in range(len(active_moves)):
+            s += actions[hexagon[0]][active_moves[i]]
+            if r < s:
+                move = active_moves[i]
+                break
+        # making move
+        if move is not None:
+            move_to_hex = compute_hex_by_layer(move, hexagon[0])
+
+            # if steps == 416 and move_to_hex == (12,11):
+            #     sg.drawGame()
+            #     breakpoint()
+
+            # if hexagon[0] == move_to_hex and move != 30:
+            #     sys.exit("Ошибка в обозначениях!")
+
+            unit = game_state.unit_type[hexagon[0]]
+            if hexagon[0] == move_to_hex:
+                continue
+            game_state.state[hexagon[0]][player_dict["unit" + str(unit)]] = 0
+            game_state.unit_type[hexagon[0]] = 0
+
+            has_already = game_state.unit_type[move_to_hex] > 0
+            who_has_him = None
+            if has_already:
+                who_has_him = (
+                    player
+                    if game_state.state[move_to_hex][player_dict["player_hexes"]] == 1
+                    else adversary
+                )
+            if player == 0:
+                try:
+                    game_state.p1_units_list.remove(hexagon[0])
+                except ValueError:
+                    game_state.drawGame()
+                    breakpoint()
+            else:
+                try:
+                    game_state.p2_units_list.remove(hexagon[0])
+                except ValueError:
+                    game_state.drawGame()
+                    breakpoint()
+
+            game_state.units_list.remove(hexagon[0])
+            perform_one_unit_move(hexagon[0], move_to_hex, unit_type=unit)
+
+            if not has_already:
+                game_state.units_list.append(move_to_hex)
+                if player == 0:
+                    game_state.p1_units_list.append(move_to_hex)
+                else:
+                    game_state.p2_units_list.append(move_to_hex)
+            else:
+                if who_has_him == player:
+                    return
+                if who_has_him == adversary:
+                    if adversary == 0:
+                        game_state.p2_units_list.append(move_to_hex)
+                        game_state.p1_units_list.remove(move_to_hex)
+                    else:
+                        game_state.p1_units_list.append(move_to_hex)
+                        game_state.p2_units_list.remove(move_to_hex)

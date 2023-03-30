@@ -6,7 +6,9 @@ import sys
 sys.path.insert(1, "/app")
 
 from engine.state_generation import GameState
-from engine.move_performer.actions_before_players_move import update_before_move
+from engine.move_performer.actions_before_and_after_players_move import (
+    update_before_move,
+)
 
 
 def get_uniform_action_distribution(height, width, move_size):
@@ -85,7 +87,6 @@ class MovePerformer:
             None
         """
         update_before_move(self.game_state)
-
 
         # change current player after the end of move and transpose state matrix
         self.game_state.change_active_player()
