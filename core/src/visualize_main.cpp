@@ -21,45 +21,61 @@
 namespace fs = std::filesystem;
 using namespace hexgame;
 
-namespace {
+namespace
+{
 
-// Uniform-random legal micro-action policy (baseline player).
-int randomAction(const std::vector<uint8_t>& legal, std::mt19937_64& rng) {
-    std::vector<int> candidates;
-    for (int i = 0; i < static_cast<int>(legal.size()); ++i)
-        if (legal[i]) candidates.push_back(i);
-    if (candidates.empty()) return static_cast<int>(legal.size()) - 1;
-    std::uniform_int_distribution<size_t> d(0, candidates.size() - 1);
-    return candidates[d(rng)];
-}
+    // Uniform-random legal micro-action policy (baseline player).
+    int randomAction(const std::vector<uint8_t> &legal, std::mt19937_64 &rng)
+    {
+        std::vector<int> candidates;
+        for (int i = 0; i < static_cast<int>(legal.size()); ++i)
+            if (legal[i])
+                candidates.push_back(i);
+        if (candidates.empty())
+            return static_cast<int>(legal.size()) - 1;
+        std::uniform_int_distribution<size_t> d(0, candidates.size() - 1);
+        return candidates[d(rng)];
+    }
 
-}  // namespace
+} // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     std::string configPath = "configs/visualization.yaml";
-    if (argc > 1) configPath = argv[1];
+    if (argc > 1)
+        configPath = argv[1];
 
-    try {
+    try
+    {
         auto cfg = VisualizationConfig::load(configPath);
         fs::create_directories(cfg.outputDir);
 
         ActionSpace actions(cfg.game);
-        Visualizer viz(cfg.hexRadiusPx, cfg.format);
+
+        RenderOptions renderOpts;
+        renderOpts.hexRadiusPx = cfg.hexRadiusPx;
+        renderOpts.format = cfg.format;
+        renderOpts.mode = cfg.renderMode;
+        renderOpts.assetsPath = cfg.assetsPath;
+        Visualizer viz(renderOpts);
 
         // optional network
         std::unique_ptr<InferenceServer> server;
         AlphaZeroNet net{nullptr};
         const bool needsNet =
             cfg.firstPlayer == "mcts" || cfg.secondPlayer == "mcts";
-        if (needsNet) {
-            NetworkConfig netCfg;  // architecture is embedded in the checkpoint;
-                                   // defaults must match training config
+        if (needsNet)
+        {
+            NetworkConfig netCfg; // architecture defaults must match training
             net = AlphaZeroNet(cfg.game, netCfg, actions.size());
-            if (!cfg.modelCheckpoint.empty() && fs::exists(cfg.modelCheckpoint)) {
+            if (!cfg.modelCheckpoint.empty() && fs::exists(cfg.modelCheckpoint))
+            {
                 torch::load(net, cfg.modelCheckpoint);
                 std::cout << "Loaded checkpoint: " << cfg.modelCheckpoint
                           << std::endl;
-            } else {
+            }
+            else
+            {
                 std::cout << "Warning: no checkpoint found at '"
                           << cfg.modelCheckpoint
                           << "', using randomly initialized network"
@@ -83,7 +99,8 @@ int main(int argc, char** argv) {
         MctsConfig playCfg = cfg.mcts;
         playCfg.dirichletEpsilon = 0.0;
         std::unique_ptr<Mcts> mcts;
-        if (server) {
+        if (server)
+        {
             mcts = std::make_unique<Mcts>(cfg.game, playCfg, actions,
                                           server.get(), cfg.seed);
         }
@@ -92,7 +109,8 @@ int main(int argc, char** argv) {
         std::vector<uint8_t> unitMoved(cells, 0);
         rules.updateBeforeMove();
 
-        auto renderFrame = [&](int frame) {
+        auto renderFrame = [&](int frame)
+        {
             std::ostringstream name;
             name << "frame_" << std::setw(5) << std::setfill('0') << frame;
             const auto path =
@@ -109,17 +127,21 @@ int main(int argc, char** argv) {
         int result = 0;
         bool over = false;
 
-        while (!over && micro++ < microCap) {
+        while (!over && micro++ < microCap)
+        {
             const int player = state.activePlayer();
-            const std::string& strategy =
+            const std::string &strategy =
                 player == 0 ? cfg.firstPlayer : cfg.secondPlayer;
 
             int flat;
-            if (strategy == "mcts" && mcts) {
+            if (strategy == "mcts" && mcts)
+            {
                 auto visits = mcts->search(state, unitMoved, false);
                 flat = mcts->selectAction(
                     visits, moveCount < cfg.mcts.temperatureMoves ? 1.0 : 0.0);
-            } else {
+            }
+            else
+            {
                 const auto legal = actions.legalMask(state, rules, unitMoved);
                 flat = randomAction(legal, rng);
             }
@@ -127,21 +149,26 @@ int main(int argc, char** argv) {
             const Action act = actions.decode(flat);
             const bool ended = actions.apply(state, rules, act, unitMoved);
 
-            if (ended) {
+            if (ended)
+            {
                 ++moveCount;
-                if (moveCount % cfg.saveEveryMove == 0) {
+                if (moveCount % cfg.saveEveryMove == 0)
+                {
                     std::cout << "move " << moveCount << " -> "
                               << renderFrame(frame++) << std::endl;
                 }
                 std::fill(unitMoved.begin(), unitMoved.end(), 0);
                 rules.updateBeforeMove();
                 const GameResult end = rules.checkGameEnd();
-                if (end == GameResult::ActivePlayerLost) {
+                if (end == GameResult::ActivePlayerLost)
+                {
                     const int winner = 1 - state.activePlayer();
                     result = winner == 0 ? 1 : -1;
                     over = true;
-                } else if (end == GameResult::Draw ||
-                           moveCount >= cfg.game.maxMoves) {
+                }
+                else if (end == GameResult::Draw ||
+                         moveCount >= cfg.game.maxMoves)
+                {
                     result = 0;
                     over = true;
                 }
@@ -149,14 +176,20 @@ int main(int argc, char** argv) {
         }
 
         renderFrame(frame++);
-        if (result > 0) std::cout << "Player 1 wins";
-        else if (result < 0) std::cout << "Player 2 wins";
-        else std::cout << "Draw";
+        if (result > 0)
+            std::cout << "Player 1 wins";
+        else if (result < 0)
+            std::cout << "Player 2 wins";
+        else
+            std::cout << "Draw";
         std::cout << " after " << moveCount << " moves. Frames written to "
                   << cfg.outputDir << std::endl;
 
-        if (server) server->stop();
-    } catch (const std::exception& e) {
+        if (server)
+            server->stop();
+    }
+    catch (const std::exception &e)
+    {
         std::cerr << "Fatal: " << e.what() << std::endl;
         return 1;
     }

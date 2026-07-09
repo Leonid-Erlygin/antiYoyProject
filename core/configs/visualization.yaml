@@ -16,13 +16,15 @@ game:
   tree_growth_probability: 0.01
 
 render:
-  hex_radius_px: 24       # hexagon radius in pixels
+  mode: assets            # assets (game sprites, PNG output) | vector (svg/ppm)
+  assets_path: /app/assets
+  hex_radius_px: 32       # hexagon radius in pixels
   save_every_move: 1      # render every N-th move
-  format: svg             # svg | ppm
+  format: png             # png (assets mode) | svg | ppm (vector mode)
 
 players:
   # each: random | mcts
-  first: mcts
+  first: random
   second: random
 
 # used only if a player is 'mcts'

@@ -99,6 +99,8 @@ VisualizationConfig VisualizationConfig::load(const std::string& path) {
     c.game = loadGame(root["game"]);
     c.mcts = loadMcts(root["mcts"]);
     if (auto n = root["render"]) {
+        if (n["mode"]) c.renderMode = n["mode"].as<std::string>();
+        if (n["assets_path"]) c.assetsPath = n["assets_path"].as<std::string>();
         if (n["hex_radius_px"]) c.hexRadiusPx = n["hex_radius_px"].as<double>();
         if (n["save_every_move"]) c.saveEveryMove = n["save_every_move"].as<int>();
         if (n["format"]) c.format = n["format"].as<std::string>();
