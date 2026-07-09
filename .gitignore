@@ -7,7 +7,7 @@ outputs
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.txt
 # Distribution / packaging
 .Python
 build/

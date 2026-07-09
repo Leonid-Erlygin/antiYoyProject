@@ -1,0 +1,35 @@
+# =====================================================================
+# Game visualization configuration
+# =====================================================================
+
+seed: 7
+output_dir: outputs/visualization
+
+game:
+  width: 10
+  height: 10
+  move_size: 2
+  max_moves: 400
+  islands: 2
+  island_size: 7
+  tree_probability: 0.1
+  tree_growth_probability: 0.01
+
+render:
+  hex_radius_px: 24       # hexagon radius in pixels
+  save_every_move: 1      # render every N-th move
+  format: svg             # svg | ppm
+
+players:
+  # each: random | mcts
+  first: mcts
+  second: random
+
+# used only if a player is 'mcts'
+model_checkpoint: checkpoints/best_model.pt
+mcts:
+  simulations: 200
+  c_puct: 1.5
+  temperature_moves: 0    # deterministic play
+
+device: cpu
