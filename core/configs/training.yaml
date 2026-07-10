@@ -8,9 +8,9 @@ output_dir: outputs/training
 
 game:
   width: 10             # board width in hexes
-  height: 10            # board height in hexes
+  height: 5            # board height in hexes
   move_size: 2          # unit movement range (2 -> 19 reachable hexes)
-  max_moves: 400        # hard cap on game length (draw after that)
+  max_moves: 100        # hard cap on game length (draw after that)
   islands: 2            # number of islands generated
   island_size: 7        # island generation potential
   tree_probability: 0.1 # probability of a tree on an active hex
@@ -26,7 +26,7 @@ network:
   lr_decay_rate: 0.1
 
 mcts:
-  simulations: 200      # MCTS simulations per move
+  simulations: 500      # MCTS simulations per move
   c_puct: 1.5
   dirichlet_alpha: 0.3
   dirichlet_epsilon: 0.25
@@ -35,12 +35,12 @@ mcts:
 
 self_play:
   games_per_iteration: 256
-  parallel_workers: 16      # self-play threads
+  parallel_workers: 40      # self-play threads
   inference_batch_size: 64  # batch size for the shared inference server
   inference_timeout_us: 500 # microseconds to wait to fill a batch
 
 replay_buffer:
-  capacity: 500000          # positions
+  capacity: 5000000          # positions
   min_size_to_train: 10000
 
 training:

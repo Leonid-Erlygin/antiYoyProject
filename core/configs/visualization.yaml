@@ -7,9 +7,9 @@ output_dir: outputs/visualization
 
 game:
   width: 10
-  height: 10
+  height: 5
   move_size: 2
-  max_moves: 400
+  max_moves: 100
   islands: 2
   island_size: 7
   tree_probability: 0.1
@@ -24,11 +24,11 @@ render:
 
 players:
   # each: random | mcts
-  first: random
+  first: random #random
   second: random
 
 # used only if a player is 'mcts'
-model_checkpoint: checkpoints/best_model.pt
+model_checkpoint: /app/core/outputs/training/checkpoints/model_iter_5.pt
 mcts:
   simulations: 200
   c_puct: 1.5
